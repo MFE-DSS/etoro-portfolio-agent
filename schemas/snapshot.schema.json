@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "eToro Portfolio Snapshot Schema",
+  "description": "A stable minimal schema for portfolio positions and cash reserves.",
+  "type": "object",
+  "properties": {
+    "date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "cash_pct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "positions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "ticker": { "type": "string" },
+          "asset_type": { "type": "string" },
+          "region": { "type": "string" },
+          "sector": { "type": "string" },
+          "weight_pct": { 
+            "type": "number", 
+            "minimum": 0, 
+            "maximum": 1 
+          },
+          "price": { "type": "number" },
+          "avg_open": { "type": "number" },
+          "pnl_pct": { "type": "number" }
+        },
+        "required": [
+          "ticker", 
+          "asset_type", 
+          "region", 
+          "sector", 
+          "weight_pct"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["date", "currency", "cash_pct", "positions"],
+  "additionalProperties": false
+}
