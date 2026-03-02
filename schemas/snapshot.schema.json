@@ -21,30 +21,49 @@
       "items": {
         "type": "object",
         "properties": {
-          "ticker": { "type": "string" },
-          "asset_type": { "type": "string" },
-          "region": { "type": "string" },
-          "sector": { "type": "string" },
-          "weight_pct": { 
-            "type": "number", 
-            "minimum": 0, 
-            "maximum": 1 
+          "ticker": {
+            "type": "string"
           },
-          "price": { "type": "number" },
-          "avg_open": { "type": "number" },
-          "pnl_pct": { "type": "number" }
+          "asset_type": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string"
+          },
+          "sector": {
+            "type": "string"
+          },
+          "weight_pct": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "price": {
+            "type": "number"
+          },
+          "avg_open": {
+            "type": "number"
+          },
+          "pnl_pct": {
+            "type": "number"
+          }
         },
         "required": [
-          "ticker", 
-          "asset_type", 
-          "region", 
-          "sector", 
+          "ticker",
+          "asset_type",
+          "region",
+          "sector",
           "weight_pct"
         ],
         "additionalProperties": false
       }
     }
   },
-  "required": ["date", "currency", "cash_pct", "positions"],
+  "required": [
+    "date",
+    "currency",
+    "cash_pct",
+    "positions"
+  ],
   "additionalProperties": false
 }

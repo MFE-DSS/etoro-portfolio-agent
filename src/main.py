@@ -10,15 +10,26 @@ def main():
     logger.info("Starting eToro Portfolio Agent pipeline...")
     
     try:
-        # Step 0: Market Regime Model
+        # Step 0: Market Regime Model (V2)
         logger.info("=== STEP 0: Market Regime Model ===")
-        from src.scoring.risk_on_score import calculate_risk_score
+        from src.scoring.regime_model import evaluate_regimes_and_scores
+        from src.collectors.fred_collector import fetch_all_fred
+        from src.collectors.market_prices_collector import fetch_all_market_prices
         from datetime import datetime, timezone
         import json
         import os
         from jsonschema import validate
         
-        market_state = calculate_risk_score()
+        logger.info("Fetching macroeconomic data from FRED...")
+        fred_data = fetch_all_fred()
+        
+        logger.info("Fetching market prices from YF...")
+        market_data = fetch_all_market_prices()
+        
+        # Merge data collections
+        all_data = {**fred_data, **market_data}
+        
+        market_state = evaluate_regimes_and_scores(all_data)
         market_state['timestamp'] = datetime.now(timezone.utc).isoformat()
         
         with open("schemas/market_state.schema.json", "r") as f:

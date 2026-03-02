@@ -1,0 +1,32 @@
+# macro_series.yml
+# Maps our logical macro variables to the exact data source and ID.
+# Format -> "SOURCE:ID"
+# Recognized sources: FRED, YF, STOOQ
+
+# Equity & Volatility
+spx: "YF:^GSPC"
+ndx: "YF:^NDX"
+vix: "YF:^VIX"
+
+# Rates (FRED)
+us10y: "FRED:DGS10"
+us2y: "FRED:DGS2"
+yield_curve: "FRED:T10Y2Y"
+
+# Credit (FRED)
+hy_spread: "FRED:BAMLH0A0HYM2"
+
+# Inflation (FRED)
+cpi_headline: "FRED:CPIAUCSL"
+cpi_core: "FRED:CPILFESL"
+
+# Growth / Labor (FRED)
+unemployment: "FRED:UNRATE"
+initial_claims: "FRED:ICSA"
+pmi: "FRED:PRFIPI" # placeholder FRED series, e.g. producer price or similar, or ISM if available
+
+# Commodities & FX
+dxy: "YF:DX-Y.NYB"
+gold: "YF:GC=F"
+oil: "YF:CL=F"
+copper: "YF:HG=F"
