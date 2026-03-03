@@ -1,0 +1,227 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "eToro Portfolio State Schema",
+    "description": "Output schema for the deterministic Portfolio Overlay layer.",
+    "type": "object",
+    "properties": {
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "portfolio_summary": {
+            "type": "object",
+            "properties": {
+                "total_positions": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "cash_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "hhi": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Herfindahl-Hirschman Index for concentration"
+                },
+                "top_1_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "top_4_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "top_10_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            },
+            "required": [
+                "total_positions",
+                "cash_pct",
+                "hhi",
+                "top_1_pct",
+                "top_4_pct",
+                "top_10_pct"
+            ],
+            "additionalProperties": false
+        },
+        "exposures": {
+            "type": "object",
+            "properties": {
+                "by_sector": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    }
+                },
+                "by_region": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    }
+                },
+                "by_asset_type": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    }
+                }
+            },
+            "required": [
+                "by_sector",
+                "by_region",
+                "by_asset_type"
+            ],
+            "additionalProperties": false
+        },
+        "risk_overlay": {
+            "type": "object",
+            "properties": {
+                "macro_regime": {
+                    "type": "string",
+                    "enum": [
+                        "green",
+                        "orange",
+                        "red"
+                    ],
+                    "description": "Market regime color from market_state.json"
+                },
+                "correlation_buckets": {
+                    "type": "object",
+                    "properties": {
+                        "energy": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "defensives": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "quality": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "us_growth": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "commodities": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "rates_sensitive": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "other": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "unknown": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        }
+                    },
+                    "required": [
+                        "energy",
+                        "defensives",
+                        "quality",
+                        "us_growth",
+                        "commodities",
+                        "rates_sensitive",
+                        "other",
+                        "unknown"
+                    ],
+                    "additionalProperties": false
+                },
+                "flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "macro_regime",
+                "correlation_buckets",
+                "flags"
+            ],
+            "additionalProperties": false
+        },
+        "positions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string"
+                    },
+                    "weight_pct": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "macro_fit_score": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "color": {
+                        "type": "string",
+                        "enum": [
+                            "green",
+                            "orange",
+                            "red"
+                        ]
+                    },
+                    "optionality_consumed": {
+                        "type": "boolean"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "ticker",
+                    "weight_pct",
+                    "macro_fit_score",
+                    "color",
+                    "optionality_consumed",
+                    "tags"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+    "required": [
+        "timestamp",
+        "portfolio_summary",
+        "exposures",
+        "risk_overlay",
+        "positions"
+    ],
+    "additionalProperties": false
+}

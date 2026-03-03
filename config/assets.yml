@@ -1,0 +1,72 @@
+# Mapping of tickers to their corresponding metadata for calculating the Portfolio Overlay
+# Fields:
+# - name: Friendly name (optional)
+# - sector: Sector grouping (e.g. Technology, Healthcare, Energy, Financials, Consumer Defensive, etc.)
+# - region: Regional grouping (e.g. US, Europe, Emerging, Global, etc.)
+# - asset_type: Type of the asset (e.g. Equity, Crypto, ETF, Commodity)
+# - role: Portfolio role (e.g. core, hedge, swing, optional)
+# - factor_bucket: One of: energy, defensives, quality, us_growth, commodities, rates_sensitive, other
+
+AAPL:
+  name: "Apple Inc."
+  sector: "Technology"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "us_growth"
+
+MSFT:
+  name: "Microsoft Corporation"
+  sector: "Technology"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "us_growth"
+
+JNJ:
+  name: "Johnson & Johnson"
+  sector: "Healthcare"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "defensives"
+
+XOM:
+  name: "Exxon Mobil Corporation"
+  sector: "Energy"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "energy"
+
+GLD:
+  name: "SPDR Gold Shares"
+  sector: "Basic Materials"
+  region: "Global"
+  asset_type: "ETF"
+  role: "hedge"
+  factor_bucket: "commodities"
+
+BTC:
+  name: "Bitcoin"
+  sector: "Crypto"
+  region: "Global"
+  asset_type: "Crypto"
+  role: "swing"
+  factor_bucket: "other"
+
+TLT:
+  name: "iShares 20+ Year Treasury Bond ETF"
+  sector: "Government"
+  region: "US"
+  asset_type: "ETF"
+  role: "hedge"
+  factor_bucket: "rates_sensitive"
+
+V:
+  name: "Visa Inc."
+  sector: "Financial Services"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "quality"

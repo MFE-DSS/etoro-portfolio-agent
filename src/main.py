@@ -51,9 +51,22 @@ def main():
         logger.info("=== STEP 2: Normalize ===")
         snapshot = normalize_portfolio(raw_data)
         
-        # Step 3: LLM Analysis
-        logger.info("=== STEP 3: Analyze ===")
-        decisions = analyze_portfolio(snapshot)
+        # Step 3: Portfolio Overlay (V3)
+        logger.info("=== STEP 3: Portfolio Overlay (V3) ===")
+        from src.portfolio.portfolio_overlay import build_portfolio_state
+        portfolio_state = build_portfolio_state(snapshot, market_state)
+        
+        with open("schemas/portfolio_state.schema.json", "r") as f:
+            portfolio_schema = json.load(f)
+        validate(instance=portfolio_state, schema=portfolio_schema)
+        
+        out_file_port = f"out/portfolio_state_{ts_str}.json"
+        with open(out_file_port, "w") as f:
+            json.dump(portfolio_state, f, indent=2)
+        logger.info(f"Portfolio state saved to {out_file_port}")
+        
+        # Stop after V3
+        logger.info("Stopping after V3. Next up: V4 LLM Decisions.")
         
         logger.info("Pipeline completed successfully.")
         
