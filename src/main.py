@@ -157,7 +157,7 @@ def main():
         logger.info("Creating run bundle and publishing artifacts...")
         bundle_dir = create_run_bundle(ts_str, ts_iso, snapshot, market_state, portfolio_state, decisions, summary, alerts)
         zip_path = zip_run_bundle(bundle_dir)
-        report_path = generate_markdown_report(ts_str, summary, alerts)
+        report_path = generate_markdown_report(ts_str, summary, alerts, market_state, portfolio_state)
         optional_google_drive_upload(zip_path)
         
         # Step 6: Webhook Broadcasting (V6)

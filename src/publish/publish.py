@@ -11,13 +11,43 @@ def zip_run_bundle(bundle_dir: str) -> str:
     archive_path = shutil.make_archive(output_filename, 'zip', bundle_dir)
     return archive_path
 
-def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[str, Any]) -> str:
+def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[str, Any], market_state: Dict[str, Any], portfolio_state: Dict[str, Any]) -> str:
     """Generates a lightweight markdown report of the latest run."""
     report_path = os.path.join(os.path.dirname(__file__), "..", "..", "out", f"report_{ts_str}.md")
     
     score = summary.get('health_score', 'N/A')
     color = summary.get('health_color', 'unknown')
     
+    # Logistic interpretation
+    if isinstance(score, (int, float)):
+        if score >= 75:
+            logistic_label = "🟢 RISK ON"
+        elif score >= 50:
+            logistic_label = "🟠 NEUTRAL"
+            color = "orange"
+        else:
+            logistic_label = "🔴 RISK OFF"
+    else:
+        logistic_label = "⚪ UNKNOWN"
+
+    # Market Drivers
+    inds = market_state.get('indicators', {})
+    recession_risk = inds.get('recession_risk', 0.0)
+    liquidity_risk = inds.get('liquidity_stress_risk', 0.0)
+    inflation_risk = inds.get('inflation_resurgence_risk', 0.0)
+    
+    market_drivers = f"""- **Recession Risk**: {recession_risk*100:.1f}% `[Range: 0-100%]`
+- **Liquidity Stress**: {liquidity_risk*100:.1f}% `[Range: 0-100%]`
+- **Inflation Risk**: {inflation_risk*100:.1f}% `[Range: 0-100%]`"""
+
+    # Portfolio Diagnostics
+    port_sum = portfolio_state.get('portfolio_summary', {})
+    hhi = port_sum.get('hhi', 0.0)
+    cash_pwd = portfolio_state.get('cash_pct', 0.0)
+    
+    port_diagnostics = f"""- **Cash Position**: {cash_pwd*100:.1f}% `[Range: 0-100%]`
+- **Concentration (HHI)**: {hhi:.3f} `[Ideal < 0.15, High > 0.25]`"""
+
     risks = "\n".join([f"- {r}" for r in summary.get('top_risks', [])]) or "- None flagged."
     opps = "\n".join([f"- {o}" for o in summary.get('top_opportunities', [])]) or "- None flagged."
     
@@ -30,17 +60,24 @@ def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[
         
     md_content = f"""# Portfolio Run Report ({ts_str})
 
-## Summary
-- **Health Score**: {score}/100 
-- **Regime Color Category**: {color.upper()}
+## 🧭 Regime Positioning (Logistic Approach)
+- **Posture**: {logistic_label}
+- **Algorithmic Health Score**: {score}/100 
+- **Regime Color**: {color.upper()}
 
-## Top Risks
+### 📊 Market Drivers
+{market_drivers}
+
+### 💼 Portfolio Diagnostics
+{port_diagnostics}
+
+## ⚠️ Top Risks
 {risks}
 
-## Top Opportunities
+## 💡 Top Opportunities
 {opps}
 
-## Active Alerts
+## 🚨 Active Alerts
 {alert_lines}
 
 *Note: This report is a lightweight human-readable version of the deterministic pipeline artifacts.*
