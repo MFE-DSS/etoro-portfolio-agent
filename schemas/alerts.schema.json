@@ -1,0 +1,53 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "eToro Alerts Schema",
+    "description": "Output schema for rule-based deterministic alerts.",
+    "type": "object",
+    "properties": {
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "alerts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "rule_name": {
+                        "type": "string"
+                    },
+                    "severity": {
+                        "type": "string",
+                        "enum": [
+                            "info",
+                            "warning",
+                            "critical"
+                        ]
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "trigger_value": {
+                        "type": [
+                            "number",
+                            "string",
+                            "boolean",
+                            "null"
+                        ]
+                    }
+                },
+                "required": [
+                    "rule_name",
+                    "severity",
+                    "message"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+    "required": [
+        "timestamp",
+        "alerts"
+    ],
+    "additionalProperties": false
+}

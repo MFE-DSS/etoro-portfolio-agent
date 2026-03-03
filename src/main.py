@@ -1,12 +1,46 @@
 import sys
 import logging
-from src.fetch_etoro import fetch_portfolio
-from src.normalize import normalize_portfolio
-from src.analyze_llm import analyze_portfolio
+import json
+import os
+from datetime import datetime, timezone
+from jsonschema import validate
 
+# Remove basicConfig if it was there, we'll set it up dynamically
 logger = logging.getLogger(__name__)
 
+def setup_logging(ts_str: str):
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # Console handler
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    root_logger.addHandler(ch)
+    
+    # JSONL handler
+    os.makedirs("out", exist_ok=True)
+    fh = logging.FileHandler(f"out/logs_{ts_str}.jsonl")
+    fh.setLevel(logging.INFO)
+    class JsonFormatter(logging.Formatter):
+        def format(self, record):
+            log_record = {
+                "timestamp": self.formatTime(record, self.datefmt),
+                "name": record.name,
+                "level": record.levelname,
+                "message": record.getMessage()
+            }
+            return json.dumps(log_record)
+    fh.setFormatter(JsonFormatter())
+    root_logger.addHandler(fh)
+
 def main():
+    ts_iso = datetime.now(timezone.utc).isoformat()
+    ts_str = ts_iso.replace(":", "").replace("-", "")[:15] # YYYYMMDD_HHMMSS
+    
+    setup_logging(ts_str)
+    
     logger.info("Starting eToro Portfolio Agent pipeline...")
     
     try:
@@ -15,10 +49,6 @@ def main():
         from src.scoring.regime_model import evaluate_regimes_and_scores
         from src.collectors.fred_collector import fetch_all_fred
         from src.collectors.market_prices_collector import fetch_all_market_prices
-        from datetime import datetime, timezone
-        import json
-        import os
-        from jsonschema import validate
         
         logger.info("Fetching macroeconomic data from FRED...")
         fred_data = fetch_all_fred()
@@ -26,18 +56,15 @@ def main():
         logger.info("Fetching market prices from YF...")
         market_data = fetch_all_market_prices()
         
-        # Merge data collections
         all_data = {**fred_data, **market_data}
         
         market_state = evaluate_regimes_and_scores(all_data)
-        market_state['timestamp'] = datetime.now(timezone.utc).isoformat()
+        market_state['timestamp'] = ts_iso
         
         with open("schemas/market_state.schema.json", "r") as f:
             schema = json.load(f)
         validate(instance=market_state, schema=schema)
         
-        os.makedirs("out", exist_ok=True)
-        ts_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         out_file = f"out/market_state_{ts_str}.json"
         with open(out_file, "w") as f:
             json.dump(market_state, f, indent=2)
@@ -45,10 +72,17 @@ def main():
 
         # Step 1: Fetch raw data
         logger.info("=== STEP 1: Fetch ===")
-        raw_data = fetch_portfolio()
+        from src.fetch_etoro import fetch_portfolio
+        if not os.environ.get("ETORO_PUBLIC_API_KEY"):
+            logger.info("ETORO_PUBLIC_API_KEY missing. Running in DRY MODE with fixture.")
+            with open("tests/fixtures/snapshot.json", "r") as f:
+                raw_data = json.load(f)
+        else:
+            raw_data = fetch_portfolio()
         
         # Step 2: Normalize data
         logger.info("=== STEP 2: Normalize ===")
+        from src.normalize import normalize_portfolio
         snapshot = normalize_portfolio(raw_data)
         
         # Step 3: Portfolio Overlay (V3)
@@ -89,8 +123,42 @@ def main():
             json.dump(decisions, f, indent=2)
         logger.info(f"Decisions saved to {out_file_decisions}")
         
-        # Stop after V4
-        logger.info("Stopping after V4. Next up: V5 Publishing (optional).")
+        # Step 5: Monitoring, Storage & Publishing (V5)
+        logger.info("=== STEP 5: Monitoring & Storage (V5) ===")
+        from src.monitoring.health_score import compute_health_score
+        from src.monitoring.alerts import evaluate_alerts
+        from src.monitoring.storage import extract_history_row, append_to_history, create_run_bundle
+        from src.publish.publish import zip_run_bundle, generate_markdown_report, optional_google_drive_upload
+        
+        summary = compute_health_score(market_state, portfolio_state, decisions)
+        summary["timestamp"] = ts_iso
+        
+        with open("schemas/summary.schema.json", "r") as f:
+            summary_schema = json.load(f)
+        validate(instance=summary, schema=summary_schema)
+        
+        out_file_summary = f"out/summary_{ts_str}.json"
+        with open(out_file_summary, "w") as f:
+            json.dump(summary, f, indent=2)
+            
+        alerts = evaluate_alerts(market_state, portfolio_state)
+        with open("schemas/alerts.schema.json", "r") as f:
+            alerts_schema = json.load(f)
+        validate(instance=alerts, schema=alerts_schema)
+        
+        out_file_alerts = f"out/alerts_{ts_str}.json"
+        with open(out_file_alerts, "w") as f:
+            json.dump(alerts, f, indent=2)
+            
+        logger.info("Appending to history...")
+        history_row = extract_history_row(ts_iso, market_state, portfolio_state, decisions, summary)
+        append_to_history(history_row)
+        
+        logger.info("Creating run bundle and publishing artifacts...")
+        bundle_dir = create_run_bundle(ts_str, ts_iso, snapshot, market_state, portfolio_state, decisions, summary, alerts)
+        zip_path = zip_run_bundle(bundle_dir)
+        report_path = generate_markdown_report(ts_str, summary, alerts)
+        optional_google_drive_upload(zip_path)
         
         logger.info("Pipeline completed successfully.")
         

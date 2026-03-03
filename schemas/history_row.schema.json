@@ -1,0 +1,124 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "eToro History Row Schema",
+    "description": "Schema protecting formatting of standard history rows.",
+    "type": "object",
+    "properties": {
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "risk_score": {
+            "type": "integer"
+        },
+        "color": {
+            "type": "string"
+        },
+        "liquidity_stress_risk": {
+            "type": [
+                "number",
+                "null"
+            ]
+        },
+        "inflation_resurgence_risk": {
+            "type": [
+                "number",
+                "null"
+            ]
+        },
+        "recession_risk": {
+            "type": [
+                "number",
+                "null"
+            ]
+        },
+        "policy_shock_risk": {
+            "type": [
+                "number",
+                "null"
+            ]
+        },
+        "hhi": {
+            "type": "number"
+        },
+        "top_1_pct": {
+            "type": "number"
+        },
+        "top_4_pct": {
+            "type": "number"
+        },
+        "top_sector_1": {
+            "type": "string"
+        },
+        "top_sector_1_weight": {
+            "type": "number"
+        },
+        "top_sector_2": {
+            "type": "string"
+        },
+        "top_sector_2_weight": {
+            "type": "number"
+        },
+        "top_sector_3": {
+            "type": "string"
+        },
+        "top_sector_3_weight": {
+            "type": "number"
+        },
+        "top_region_1": {
+            "type": "string"
+        },
+        "top_region_1_weight": {
+            "type": "number"
+        },
+        "top_region_2": {
+            "type": "string"
+        },
+        "top_region_2_weight": {
+            "type": "number"
+        },
+        "top_region_3": {
+            "type": "string"
+        },
+        "top_region_3_weight": {
+            "type": "number"
+        },
+        "flag_missing_metadata_count": {
+            "type": "integer"
+        },
+        "flag_optionality_consumed_count": {
+            "type": "integer"
+        },
+        "decision_add_count": {
+            "type": "integer"
+        },
+        "decision_trim_count": {
+            "type": "integer"
+        },
+        "decision_sell_count": {
+            "type": "integer"
+        },
+        "decision_hold_count": {
+            "type": "integer"
+        },
+        "health_score": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "timestamp",
+        "risk_score",
+        "color",
+        "hhi",
+        "top_1_pct",
+        "top_4_pct",
+        "flag_missing_metadata_count",
+        "flag_optionality_consumed_count",
+        "decision_add_count",
+        "decision_trim_count",
+        "decision_sell_count",
+        "decision_hold_count",
+        "health_score"
+    ],
+    "additionalProperties": true
+}

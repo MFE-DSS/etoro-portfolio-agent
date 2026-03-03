@@ -1,0 +1,65 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "eToro Portfolio Summary Schema",
+    "description": "Output schema for the deterministic Portfolio Health and summary metrics (V5).",
+    "type": "object",
+    "properties": {
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "health_score": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+        },
+        "health_color": {
+            "type": "string",
+            "enum": [
+                "green",
+                "orange",
+                "red"
+            ]
+        },
+        "breakdown": {
+            "type": "object",
+            "properties": {
+                "base_score": {
+                    "type": "integer"
+                },
+                "penalties": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                }
+            },
+            "required": [
+                "base_score",
+                "penalties"
+            ],
+            "additionalProperties": false
+        },
+        "top_risks": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "top_opportunities": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": [
+        "timestamp",
+        "health_score",
+        "health_color",
+        "breakdown",
+        "top_risks",
+        "top_opportunities"
+    ],
+    "additionalProperties": false
+}

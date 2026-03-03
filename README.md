@@ -28,13 +28,23 @@ In your GitHub repository, go to **Settings > Secrets and variables > Actions** 
    ```bash
    export ETORO_PUBLIC_API_KEY="your_etoro_api_key"
    export ETORO_USER_KEY="your_etoro_user_key"
-   export GOOGLE_API_KEY="your_google_api_key"
+   export GEMINI_API_KEY="your_google_api_key"
    ```
 2. Run the main pipeline orchestrator:
    ```bash
    python src/main.py
    ```
 
-## Produced Artifacts
+### Dry Mode Logging and Testing
+If the `ETORO_PUBLIC_API_KEY` is completely missing from your environment shell, `src/main.py` will transparently enter **Dry Mode**. It skips making network requests to the eToro API, and instead mocks the input using our local sample payload mapped in `tests/fixtures/snapshot.json`.
 
-The pipeline runs deterministically and produces JSON output files in the `out/` directory with UTC timestamps (e.g., `snapshot_20260302_080000.json`, `decisions_20260302_080000.json`). During GitHub Actions runs, these outputs are uploaded as workflow artifacts.
+This allows for full, comprehensive offline testing of the deterministic V5 metrics engine, history appends, alert condition generation, and JSON outputs. 
+
+## Produced Artifacts & Monitoring (V5)
+
+The pipeline runs deterministically and produces extensive `JSON` output artifacts tracked under the `out/` directory with UTC ISO timestamps. During GitHub Actions runs, these outputs are uploaded as workflow artifact `.zip` bundles.
+
+In addition to normalized `snapshot` and `market_state` representations, the V5 Pipeline exposes:
+- **`health_score`**: A strictly deterministic 0-100 penalty score identifying systemic risk mismatches and extreme liquidity dependencies configured in `src/monitoring/health_score.py`.
+- **`alerts`**: Real-time rule evaluators testing configuration directives defined via `config/alerts.yml`. If trigger rules are hit, they appear under standard RFC3339 logging.
+- **`history.csv`**: Every single main-pipeline orchestrator invocation cleanly adds its derived data vector structure directly tracking changes in macro condition severity alongside optionality depletion paths.

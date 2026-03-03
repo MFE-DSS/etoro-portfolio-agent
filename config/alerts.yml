@@ -1,0 +1,35 @@
+alerts:
+  - name: "risk_score_high"
+    description: "Risk score breached the high threshold."
+    metric: "risk_score"
+    operator: ">="
+    threshold: 60
+    severity: "warning"
+  
+  - name: "liquidity_stress"
+    description: "Liquidity stress indicators are flashing red."
+    metric: "liquidity_stress_risk"
+    operator: ">="
+    threshold: 0.70
+    severity: "critical"
+    
+  - name: "concentration_top_4"
+    description: "Top 4 positions account for >55% of the portfolio."
+    metric: "top_4_pct"
+    operator: ">="
+    threshold: 0.55
+    severity: "warning"
+
+  - name: "single_position_overweight"
+    description: "At least one position is >= 15%."
+    metric: "max_position_weight"
+    operator: ">="
+    threshold: 0.15
+    severity: "info"
+    
+  - name: "optionality_consumed_heavy"
+    description: "Total portfolio weight of consumed optionality is >= 20%."
+    metric: "optionality_consumed_weight"
+    operator: ">="
+    threshold: 0.20
+    severity: "warning"

@@ -1,0 +1,58 @@
+{
+    "timestamp": "2026-03-03T10:00:00Z",
+    "date": "2026-03-03T10:00:00Z",
+    "currency": "USD",
+    "cash_pct": 0.15,
+    "positions": [
+        {
+            "ticker": "AAPL",
+            "asset_type": "Equity",
+            "region": "US",
+            "sector": "Technology",
+            "weight_pct": 0.20,
+            "price": 150.0,
+            "avg_open": 100.0,
+            "pnl_pct": 0.5
+        },
+        {
+            "ticker": "MSFT",
+            "asset_type": "Equity",
+            "region": "US",
+            "sector": "Technology",
+            "weight_pct": 0.15,
+            "price": 300.0,
+            "avg_open": 250.0,
+            "pnl_pct": 0.2
+        },
+        {
+            "ticker": "XOM",
+            "asset_type": "Equity",
+            "region": "US",
+            "sector": "Energy",
+            "weight_pct": 0.25,
+            "price": 110.0,
+            "avg_open": 90.0,
+            "pnl_pct": 0.22
+        },
+        {
+            "ticker": "TLT",
+            "asset_type": "ETF",
+            "region": "US",
+            "sector": "Government",
+            "weight_pct": 0.15,
+            "price": 95.0,
+            "avg_open": 100.0,
+            "pnl_pct": -0.05
+        },
+        {
+            "ticker": "GLD",
+            "asset_type": "ETF",
+            "region": "Global",
+            "sector": "Basic Materials",
+            "weight_pct": 0.10,
+            "price": 190.0,
+            "avg_open": 180.0,
+            "pnl_pct": 0.055
+        }
+    ]
+}
