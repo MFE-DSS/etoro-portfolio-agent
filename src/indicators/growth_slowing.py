@@ -17,7 +17,7 @@ def evaluate_growth_slowing(data: Dict[str, SeriesData]) -> dict:
         # Sahm rule inspired: current vs min of last 12 mo, simplified
         if len(df) >= 12:
             min_12m = df['v'].tail(12).min()
-            unemp_rising = (unemp_level - min_12m) >= 0.5
+            unemp_rising = bool((unemp_level - min_12m) >= 0.5)
         
     claims_level = None
     if claims and claims.data:
