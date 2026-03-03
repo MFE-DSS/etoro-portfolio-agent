@@ -117,7 +117,7 @@ def generate_decisions(snapshot: Dict[str, Any], market_state: Dict[str, Any], p
         logger.error(f"Failed to load decisions schema: {e}")
         return build_fallback_decisions(snapshot, market_state, portfolio_state, "Schema file missing.")
 
-    prompt = build_user_prompt(snapshot, market_state, portfolio_state, valid_tickers)
+    prompt = build_user_prompt(snapshot, market_state, portfolio_state, valid_tickers, json.dumps(schema, indent=2))
     
     chat_config = {"system_instruction": SYSTEM_PROMPT}
 

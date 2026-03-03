@@ -36,7 +36,8 @@ def build_user_prompt(
     snapshot: Dict[str, Any], 
     market_state: Dict[str, Any], 
     portfolio_state: Dict[str, Any],
-    valid_tickers: List[str]
+    valid_tickers: List[str],
+    schema_str: str = ""
 ) -> str:
     """Builds the strictly formatted user prompt payload."""
     
@@ -58,9 +59,12 @@ Analyze the following portfolio and market state payload:
 
 # INSTRUCTIONS
 Analyze the regime and current portfolio construct.
-Calculate a 2-month DCA plan based on the market regime probabilities and indicators (e.g., VIX if present, risk_score, liquidity_stress_risk).
+Calculate a 2-month DCA plan based on the market regime probabilities and indicators.
 Rank the top portfolio actions (up to 5) to TRIM, ADD, HOLD, EXIT, or WATCH. 
-Remember to strictly output raw JSON matching decisions.schema.json, and DO NOT use any markdown formatting or hallucinate any tickers not in `valid_tickers`.
+
+# REQUIRED SCHEMA
+You MUST strictly output a JSON object matching this schema. Pay exact attention to the key names (e.g., 'actions', 'dca_plan_2m', 'timestamp') and their types. Do not add keys that are not in the schema. Do not use markdown backticks.
+{schema_str}
 """
 
 REPAIR_PROMPT = """

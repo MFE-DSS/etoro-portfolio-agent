@@ -34,11 +34,14 @@ def fetch_all_fred(config_path: str = "config/macro_series.yml") -> Dict[str, Se
                 continue
                 
             # Take last 200 points for history (enough for MA200 if needed, though mostly for MACRO we just need last few)
+            # Take last 200 points for history
             df_recent = df.tail(200)
+            
+            date_col = 'DATE' if 'DATE' in df.columns else 'observation_date'
             
             points = []
             for _, row in df_recent.iterrows():
-                points.append(DataPoint(date=str(row['DATE']), value=float(row[series_id])))
+                points.append(DataPoint(date=str(row[date_col]), value=float(row[series_id])))
                 
             result[logical_key] = SeriesData(key=logical_key, data=points)
         except Exception as e:
