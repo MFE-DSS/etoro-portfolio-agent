@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 from jsonschema import validate, ValidationError
-import google.generativeai as genai
+from google import genai
 
 from src.decision_engine.prompts import SYSTEM_PROMPT, build_user_prompt, REPAIR_PROMPT
 
@@ -106,9 +106,7 @@ def generate_decisions(snapshot: Dict[str, Any], market_state: Dict[str, Any], p
         logger.error("GEMINI_API_KEY not found. Triggering fallback.")
         return build_fallback_decisions(snapshot, market_state, portfolio_state, "API Key missing.")
         
-    genai.configure(api_key=api_key)
-    # Using gemini-2.5-flash for reasoning speed and structured output capabilities
-    model = genai.GenerativeModel('gemini-2.5-flash', system_instruction=SYSTEM_PROMPT)
+    client = genai.Client(api_key=api_key)
     
     # Load schema for validation
     schema_path = os.path.join(os.path.dirname(__file__), "..", "..", "schemas", "decisions.schema.json")
@@ -121,10 +119,11 @@ def generate_decisions(snapshot: Dict[str, Any], market_state: Dict[str, Any], p
 
     prompt = build_user_prompt(snapshot, market_state, portfolio_state, valid_tickers)
     
-    chat = model.start_chat()
-    
+    chat_config = {"system_instruction": SYSTEM_PROMPT}
+
     # Attempt 1
     try:
+        chat = client.chats.create(model="gemini-2.5-flash", config=chat_config)
         response = chat.send_message(prompt)
         raw_json = clean_llm_json(response.text)
         decisions = json.loads(raw_json)

@@ -46,14 +46,15 @@ def test_strip_invalid_tickers():
     assert len(cleaned["dca_plan_2m"][0]["targets"]) == 1
     assert cleaned["dca_plan_2m"][0]["targets"][0]["ticker"] == "AAPL"
 
-@patch('src.decision_engine.engine.genai.GenerativeModel')
-def test_generate_decisions_valid_json(mock_model_class, mock_inputs, monkeypatch):
+@patch('src.decision_engine.engine.genai.Client')
+def test_generate_decisions_valid_json(mock_client_class, mock_inputs, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake_key")
     snapshot, market_state, portfolio_state = mock_inputs
     valid_tickers = ["AAPL"]
     
     # Mock LLM returning valid JSON
-    mock_model = MagicMock()
+    mock_client = MagicMock()
+    mock_chats = MagicMock()
     mock_chat = MagicMock()
     mock_response = MagicMock()
     
@@ -88,28 +89,31 @@ def test_generate_decisions_valid_json(mock_model_class, mock_inputs, monkeypatc
     
     mock_response.text = f"```json\n{valid_json_str}\n```"
     mock_chat.send_message.return_value = mock_response
-    mock_model.start_chat.return_value = mock_chat
-    mock_model_class.return_value = mock_model
+    mock_chats.create.return_value = mock_chat
+    mock_client.chats = mock_chats
+    mock_client_class.return_value = mock_client
     
     decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
     assert decisions["regime_summary"]["color"] == "green"
     assert len(decisions["actions"]) == 1
 
-@patch('src.decision_engine.engine.genai.GenerativeModel')
-def test_generate_decisions_trigger_fallback_on_garbage(mock_model_class, mock_inputs, monkeypatch):
+@patch('src.decision_engine.engine.genai.Client')
+def test_generate_decisions_trigger_fallback_on_garbage(mock_client_class, mock_inputs, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake_key")
     snapshot, market_state, portfolio_state = mock_inputs
     valid_tickers = ["AAPL"]
     
-    mock_model = MagicMock()
+    mock_client = MagicMock()
+    mock_chats = MagicMock()
     mock_chat = MagicMock()
     mock_response = MagicMock()
     
     # Mock LLM returning garbage text both times
     mock_response.text = "This is not json."
     mock_chat.send_message.return_value = mock_response
-    mock_model.start_chat.return_value = mock_chat
-    mock_model_class.return_value = mock_model
+    mock_chats.create.return_value = mock_chat
+    mock_client.chats = mock_chats
+    mock_client_class.return_value = mock_client
     
     decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
     

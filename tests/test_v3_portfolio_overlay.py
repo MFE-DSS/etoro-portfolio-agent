@@ -30,9 +30,9 @@ def test_compute_concentration():
     
     # HHI: 0.25 + 0.04 + 0.01 + 0.01 + 0.01 = 0.32
     assert abs(conc["hhi"] - 0.32) < 1e-6
-    assert conc["top_1_pct"] == 0.5
-    assert conc["top_4_pct"] == 0.9
-    assert conc["top_10_pct"] == 1.0
+    assert conc["top_1_pct"] == pytest.approx(0.5)
+    assert conc["top_4_pct"] == pytest.approx(0.9)
+    assert conc["top_10_pct"] == pytest.approx(1.0)
 
 def test_score_macro_fit():
     # Green regime, Cyclical
