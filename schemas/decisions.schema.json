@@ -1,0 +1,240 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "eToro Portfolio Decisions Schema",
+    "description": "Output schema for the LLM Decision Engine (V4).",
+    "type": "object",
+    "properties": {
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "regime_summary": {
+            "type": "object",
+            "properties": {
+                "risk_score": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                },
+                "color": {
+                    "type": "string",
+                    "enum": [
+                        "green",
+                        "orange",
+                        "red"
+                    ]
+                },
+                "key_risks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "key_supports": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "risk_score",
+                "color",
+                "key_risks",
+                "key_supports"
+            ],
+            "additionalProperties": false
+        },
+        "portfolio_diagnosis": {
+            "type": "object",
+            "properties": {
+                "cash_pct": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "concentration_flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "correlation_flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "overweights": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "ticker": {
+                                "type": "string"
+                            },
+                            "weight_pct": {
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 1
+                            },
+                            "reason": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "ticker",
+                            "weight_pct",
+                            "reason"
+                        ],
+                        "additionalProperties": false
+                    }
+                },
+                "missing_metadata": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "cash_pct",
+                "concentration_flags",
+                "correlation_flags",
+                "overweights",
+                "missing_metadata"
+            ],
+            "additionalProperties": false
+        },
+        "actions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "HOLD",
+                            "WATCH",
+                            "ADD",
+                            "TRIM",
+                            "EXIT"
+                        ]
+                    },
+                    "priority": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                    },
+                    "rationale": {
+                        "type": "string"
+                    },
+                    "max_change_pct": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    }
+                },
+                "required": [
+                    "ticker",
+                    "action",
+                    "priority",
+                    "rationale",
+                    "max_change_pct"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "dca_plan_2m": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "week": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 8
+                    },
+                    "allocation_pct_of_cash": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                    },
+                    "targets": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "ticker": {
+                                    "type": "string"
+                                },
+                                "pct": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                }
+                            },
+                            "required": [
+                                "ticker",
+                                "pct"
+                            ],
+                            "additionalProperties": false
+                        }
+                    },
+                    "conditions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "week",
+                    "allocation_pct_of_cash",
+                    "targets",
+                    "conditions"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "alerts": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "condition": {
+                        "type": "string"
+                    },
+                    "meaning": {
+                        "type": "string"
+                    },
+                    "response": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "condition",
+                    "meaning",
+                    "response"
+                ],
+                "additionalProperties": false
+            }
+        }
+    },
+    "required": [
+        "timestamp",
+        "regime_summary",
+        "portfolio_diagnosis",
+        "actions",
+        "dca_plan_2m",
+        "alerts"
+    ],
+    "additionalProperties": false
+}

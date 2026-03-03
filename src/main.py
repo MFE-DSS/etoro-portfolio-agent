@@ -65,8 +65,32 @@ def main():
             json.dump(portfolio_state, f, indent=2)
         logger.info(f"Portfolio state saved to {out_file_port}")
         
-        # Stop after V3
-        logger.info("Stopping after V3. Next up: V4 LLM Decisions.")
+        # Step 4: Decision Engine (V4)
+        logger.info("=== STEP 4: Decision Engine (V4) ===")
+        from src.decision_engine.engine import generate_decisions
+        import yaml
+        
+        # Load valid tickers from config and snapshot
+        try:
+            with open("config/assets.yml", "r") as f:
+                assets_config = yaml.safe_load(f) or {}
+            valid_tickers = list(assets_config.keys())
+        except:
+            valid_tickers = []
+            
+        for pos in snapshot.get("positions", []):
+            if pos.get("ticker") not in valid_tickers:
+                valid_tickers.append(pos.get("ticker"))
+
+        decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
+        
+        out_file_decisions = f"out/decisions_{ts_str}.json"
+        with open(out_file_decisions, "w") as f:
+            json.dump(decisions, f, indent=2)
+        logger.info(f"Decisions saved to {out_file_decisions}")
+        
+        # Stop after V4
+        logger.info("Stopping after V4. Next up: V5 Publishing (optional).")
         
         logger.info("Pipeline completed successfully.")
         
