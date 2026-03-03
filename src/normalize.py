@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import jsonschema
+import yaml
 from jsonschema import validate
 from datetime import datetime, timezone
 from src.utils import get_utc_timestamp, write_json
@@ -12,6 +13,13 @@ def load_schema(schema_path: str = "schemas/snapshot.schema.json") -> dict:
     """Loads the JSON schema for validation."""
     with open(schema_path, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+def load_assets_config(config_path: str = "config/assets.yml") -> dict:
+    """Loads the assets configuration."""
+    if not os.path.exists(config_path):
+        return {}
+    with open(config_path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f) or {}
 
 def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
     """
@@ -51,10 +59,22 @@ def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
             ticker = KNOWN_INSTRUMENTS.get(inst_id, f"ASSET_{inst_id}")
             grouped[ticker] = grouped.get(ticker, 0.0) + amount
 
+        assets_config = load_assets_config()
+
         for ticker, amount in grouped.items():
             weight_pct = amount / total_equity
+            
+            asset_info = assets_config.get(ticker, {})
+            # fallback defaults if not found in assets.yml
+            asset_type = asset_info.get("asset_type", "Unknown")
+            region = asset_info.get("region", "Unknown")
+            sector = asset_info.get("sector", "Unknown")
+
             normalized_positions.append({
                 "ticker": ticker,
+                "asset_type": asset_type,
+                "region": region,
+                "sector": sector,
                 "weight_pct": round(weight_pct, 4)
             })
 
