@@ -160,6 +160,11 @@ def main():
         report_path = generate_markdown_report(ts_str, summary, alerts)
         optional_google_drive_upload(zip_path)
         
+        # Step 6: Webhook Broadcasting (V6)
+        logger.info("=== STEP 6: Webhook Broadcasting (V6) ===")
+        from src.publish.notifier import send_webhook_notification
+        send_webhook_notification(report_path, ts_str)
+        
         logger.info("Pipeline completed successfully.")
         
     except Exception as e:

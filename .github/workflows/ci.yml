@@ -56,6 +56,7 @@ jobs:
           ETORO_PUBLIC_API_KEY: ${{ secrets.ETORO_PUBLIC_API_KEY }}
           ETORO_USER_KEY: ${{ secrets.ETORO_USER_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: |
           python src/main.py
           
