@@ -150,7 +150,11 @@ def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[
         yc_str = f"Yield Curve (10y-2y) {fmt_num(yc)} \u2192 {yc_eval}"
 
     dxy_ma = inds.get("usd_gold", {}).get("dxy_above_ma50")
-    dxy_str = f"USD (DXY) above MA50: {'Yes \u2192 Dollar tightening' if dxy_ma else 'No \u2192 Dollar benign'}" if dxy_ma is not None else "USD Trend: Data missing"
+    if dxy_ma is None:
+        dxy_str = "USD Trend: Data missing"
+    else:
+        dxy_eval = "Yes \u2192 Dollar tightening" if dxy_ma else "No \u2192 Dollar benign"
+        dxy_str = f"USD (DXY) above MA50: {dxy_eval}"
     
     if cpi is None:
         inf_str = "- Inflation CPI: Data missing (not used)"
