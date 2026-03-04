@@ -90,13 +90,52 @@
             "type": "object",
             "properties": {
                 "macro_regime": {
-                    "type": "string",
-                    "enum": [
-                        "green",
-                        "orange",
-                        "red"
+                    "type": "object",
+                    "properties": {
+                        "regime_state": {
+                            "type": "string"
+                        },
+                        "macro_score": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                        },
+                        "traffic_light": {
+                            "type": "string",
+                            "enum": [
+                                "GREEN",
+                                "ORANGE",
+                                "RED"
+                            ]
+                        },
+                        "p_drawdown_20": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "p_bull": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "buy_the_dip_ok": {
+                            "type": "boolean"
+                        },
+                        "recommended_action": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "regime_state",
+                        "macro_score",
+                        "traffic_light",
+                        "p_drawdown_20",
+                        "p_bull",
+                        "buy_the_dip_ok",
+                        "recommended_action"
                     ],
-                    "description": "Market regime color from market_state.json"
+                    "additionalProperties": false,
+                    "description": "Macro regime state detailed object from V5 layer."
                 },
                 "correlation_buckets": {
                     "type": "object",

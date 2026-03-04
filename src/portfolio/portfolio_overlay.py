@@ -90,6 +90,17 @@ def build_portfolio_state(snapshot: Dict[str, Any], market_state: Dict[str, Any]
             "tags": score_res["tags"]
         })
 
+    # Assemble V5 aware risk_overlay
+    macro_regime_payload = market_state.get("macro_regime", {
+        "regime_state": "UNKNOWN",
+        "macro_score": 50.0,
+        "traffic_light": market_state.get("color", "unknown"),
+        "p_drawdown_20": 0.0,
+        "p_bull": 0.5,
+        "buy_the_dip_ok": False,
+        "recommended_action": "HOLD"
+    })
+
     # Assemble final payload
     portfolio_state = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -100,7 +111,7 @@ def build_portfolio_state(snapshot: Dict[str, Any], market_state: Dict[str, Any]
         },
         "exposures": exposures,
         "risk_overlay": {
-            "macro_regime": market_state.get("color", "unknown"),
+            "macro_regime": macro_regime_payload,
             "correlation_buckets": correlation_buckets,
             "flags": list(flags)
         },

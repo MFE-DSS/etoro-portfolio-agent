@@ -1,0 +1,37 @@
+markov_switching:
+  model_type: "variance_switching" # options: mean_switching, variance_switching, mean_variance_switching
+  target_series: "QQQ_close_log_return"
+  num_regimes: 2
+  max_iterations: 100
+  tolerance: 1e-6
+  search_method: "ncg"
+
+event_probit:
+  horizon_days: 63 # ~3 months for drawdown horizon
+  drawdown_threshold: -0.20 # 20% drawdown
+  regularization: "l2"
+  C_inverse_regularization: 1.0 # Scikit-learn C parameter
+  max_iter: 1000
+  features:
+    - TERM_SPREAD_10Y_3M
+    - VIXCLS
+    - BAMLH0A0HYM2
+    - UNRATE_diff
+    - YIELD_CURVE_INVERTED
+    - VOL_STRESS
+    - CREDIT_STRESS
+
+ensemble_scoring:
+  weights:
+    p_bull: 0.4
+    p_drawdown_20_inv: 0.4
+    p_recession_inv: 0.2
+  traffic_light_thresholds:
+    red_below: 35.0
+    green_above: 65.0
+  rules:
+    buy_the_dip:
+      max_p_recession: 0.4
+      max_p_drawdown: 0.4
+      min_recent_drawdown: 0.05 # 5% drop to consider it a "dip"
+      disallowed_regimes: ["red"]

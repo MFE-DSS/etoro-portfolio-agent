@@ -1,0 +1,97 @@
+features:
+  - name: "QQQ_close"
+    source: "local"
+    frequency: "daily"
+    type: "price"
+    transform: "log_return"
+    release_lag_days: 0
+
+  - name: "DGS10"
+    source: "fred"
+    frequency: "daily"
+    type: "rate"
+    transform: "diff"
+    release_lag_days: 1
+    
+  - name: "DGS2"
+    source: "fred"
+    frequency: "daily"
+    type: "rate"
+    transform: "diff"
+    release_lag_days: 1
+    
+  - name: "DGS3MO"
+    source: "fred"
+    frequency: "daily"
+    type: "rate"
+    transform: "diff"
+    release_lag_days: 1
+    
+  - name: "BAMLH0A0HYM2" # ICE BofA US High Yield Index Option-Adjusted Spread
+    source: "fred"
+    frequency: "daily"
+    type: "spread"
+    transform: "level"
+    release_lag_days: 1
+
+  - name: "VIXCLS"
+    source: "fred"
+    frequency: "daily"
+    type: "volatility"
+    transform: "level"
+    release_lag_days: 1
+
+  - name: "WM2NS" # M2 Money Stock
+    source: "fred"
+    frequency: "monthly"
+    type: "liquidity"
+    transform: "yoy_pct_change"
+    release_lag_days: 25 # Usually released 3-4 weeks after month end
+
+  - name: "CPIAUCSL"
+    source: "fred"
+    frequency: "monthly"
+    type: "inflation"
+    transform: "yoy_pct_change"
+    release_lag_days: 15 # Usually released mid-month
+
+  - name: "ICSA" # Initial Claims
+    source: "fred"
+    frequency: "weekly"
+    type: "labor"
+    transform: "zscore_52w"
+    release_lag_days: 5 # Released Thursdays for previous week
+
+  - name: "UNRATE" # Unemployment Rate
+    source: "fred"
+    frequency: "monthly"
+    type: "labor"
+    transform: "diff"
+    release_lag_days: 10 # Usually first Friday of month
+
+  - name: "USREC" # NBER Recession Indicator
+    source: "fred"
+    frequency: "monthly"
+    type: "recession"
+    transform: "level"
+    release_lag_days: 90 # heavily lagged
+
+derived:
+  - name: "TERM_SPREAD_10Y_3M"
+    computation: "DGS10 - DGS3MO"
+  
+  - name: "TERM_SPREAD_10Y_2Y"
+    computation: "DGS10 - DGS2"
+
+qualitative_dummies:
+  - name: "YIELD_CURVE_INVERTED"
+    condition: "TERM_SPREAD_10Y_3M < 0.0"
+  
+  - name: "VOL_STRESS"
+    condition: "VIXCLS > 25.0"
+    
+  - name: "CREDIT_STRESS"
+    condition: "BAMLH0A0HYM2 > 5.5"
+
+  - name: "POLICY_TIGHTENING"
+    condition: "DGS2_diff_21d > 0.5" # Rate momentum proxy

@@ -6,3 +6,6 @@ yfinance>=0.2.36
 pandas>=2.0.0
 PyYAML>=6.0.1
 markdown>=3.5.0
+statsmodels
+scikit-learn
+matplotlib

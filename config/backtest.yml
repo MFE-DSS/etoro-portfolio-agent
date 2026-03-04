@@ -1,0 +1,22 @@
+walk_forward:
+  start_date: "2010-01-01"
+  end_date: "2025-12-31" # Or latest available
+  train_min_period_days: 1260 # ~5 years min training window
+  refit_frequency_days: 30 # refit once a month
+  horizon_days: 63
+  
+metrics:
+  classification:
+    - auc
+    - brier_score
+    - log_loss
+  strategy:
+    benchmark_ticker: "QQQ"
+    risk_free_rate: 0.04
+    initial_capital: 100000.0
+
+reporting:
+  output_dir: "backtests/v5"
+  save_predictions_csv: true
+  save_equity_curve_csv: true
+  save_plots: true
