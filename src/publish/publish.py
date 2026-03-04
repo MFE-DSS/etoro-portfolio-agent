@@ -15,71 +15,139 @@ def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[
     """Generates a lightweight markdown report of the latest run."""
     report_path = os.path.join(os.path.dirname(__file__), "..", "..", "out", f"report_{ts_str}.md")
     
-    score = summary.get('health_score', 'N/A')
-    color = summary.get('health_color', 'unknown')
-    
-    # Logistic interpretation
-    if isinstance(score, (int, float)):
-        if score >= 75:
-            logistic_label = "🟢 RISK ON"
-        elif score >= 50:
-            logistic_label = "🟠 NEUTRAL"
-            color = "orange"
-        else:
-            logistic_label = "🔴 RISK OFF"
-    else:
-        logistic_label = "⚪ UNKNOWN"
+    # helper for %
+    def fmt_pct(val):
+        if val is None: return "N/A"
+        return f"{float(val)*100:.1f}%"
 
-    # Market Drivers
-    inds = market_state.get('indicators', {})
-    recession_risk = inds.get('recession_risk', 0.0)
-    liquidity_risk = inds.get('liquidity_stress_risk', 0.0)
-    inflation_risk = inds.get('inflation_resurgence_risk', 0.0)
+    # --- wiring status ---
+    risk_overlay = portfolio_state.get('risk_overlay', {})
+    macro = risk_overlay.get('macro_regime', {})
     
-    market_drivers = f"""- **Recession Risk**: {recession_risk*100:.1f}% `[Range: 0-100%]`
-- **Liquidity Stress**: {liquidity_risk*100:.1f}% `[Range: 0-100%]`
-- **Inflation Risk**: {inflation_risk*100:.1f}% `[Range: 0-100%]`"""
-
-    # Portfolio Diagnostics
-    port_sum = portfolio_state.get('portfolio_summary', {})
-    hhi = port_sum.get('hhi', 0.0)
-    cash_pwd = portfolio_state.get('cash_pct', 0.0)
+    # Check if V5 is present (has fields like p_drawdown_composite)
+    v5_present = "p_drawdown_20" in macro or "p_bull" in macro
     
-    port_diagnostics = f"""- **Cash Position**: {cash_pwd*100:.1f}% `[Range: 0-100%]`
-- **Concentration (HHI)**: {hhi:.3f} `[Ideal < 0.15, High > 0.25]`"""
+    # Degeneracy check
+    p_b = float(macro.get("p_bull", 0.5))
+    p_dd20 = float(macro.get("p_drawdown_20", 0.0))
+    p_dd10 = float(macro.get("p_drawdown_10", 0.0))
+    reg_state = str(macro.get("regime_state", "UNKNOWN"))
+    
+    is_degenerate = False
+    if reg_state == "UNKNOWN":
+        is_degenerate = True
+    elif abs(p_b - 0.5) < 0.02:
+        is_degenerate = True
+    elif (p_dd20 < 0.005 and p_dd10 < 0.005):
+        # We assume drawdown ~0.0 means degenerate
+        is_degenerate = True
 
+    v5_status_str = "DEGRADED (probabilities degenerate)" if is_degenerate else "OK"
+    if not v5_present: v5_status_str = "MISSING"
+
+    # missing metadata count
+    missing_meta_count = sum(1 for p in portfolio_state.get('positions', []) if p.get('asset_type') == 'UNKNOWN' or p.get('sector') == 'UNKNOWN')
+    if missing_meta_count == 0 and "MISSING_ASSET_METADATA" in risk_overlay.get("flags", []):
+        missing_meta_count = 1 # fallback if positions list is missing but flag is present
+
+    wiring_status = f"""**Wiring Status:**
+- Macro V5 Present: {'Yes' if v5_present else 'No'}
+- Macro V5 Usable: {'No' if is_degenerate else 'Yes'}
+- Missing Metadata Count: {missing_meta_count}
+"""
+
+    # --- A) Portfolio Health ---
+    h_score = summary.get('health_score', 'N/A')
+    h_color = summary.get('health_color', 'UNKNOWN').upper()
+    penalties = summary.get('penalties', {})
+    pen_str = ""
+    for k, v in penalties.items():
+        pen_str += f"  - {k}: -{v}\n"
+    if not pen_str: pen_str = "  - None\n"
+    
     risks = "\n".join([f"- {r}" for r in summary.get('top_risks', [])]) or "- None flagged."
-    opps = "\n".join([f"- {o}" for o in summary.get('top_opportunities', [])]) or "- None flagged."
     
-    alert_lines = ""
-    for a in alerts.get("alerts", []):
-        alert_lines += f"- **[{a['severity'].upper()}]** {a['rule_name']}: {a['message']} (Trigger: {a['trigger_value']})\n"
-        
-    if not alert_lines:
-        alert_lines = "- No alerts triggered this run."
-        
-    md_content = f"""# Portfolio Run Report ({ts_str})
-
-## 🧭 Regime Positioning (Logistic Approach)
-- **Posture**: {logistic_label}
-- **Algorithmic Health Score**: {score}/100 
-- **Regime Color**: {color.upper()}
-
-### 📊 Market Drivers
-{market_drivers}
-
-### 💼 Portfolio Diagnostics
-{port_diagnostics}
-
-## ⚠️ Top Risks
+    sec_a = f"""## A) Portfolio Health (Pipeline Quality)
+- **Health Score**: {h_score}/100 ({h_color})
+- **Penalties**:
+{pen_str}
+- **Top Risks**:
 {risks}
+"""
 
-## 💡 Top Opportunities
-{opps}
+    # --- B) Macro Regime (V5 Models) ---
+    if is_degenerate:
+        v5_headline = "⚪ V5 status: DEGRADED (probabilities degenerate)"
+    else:
+        tl = str(macro.get('traffic_light', 'UNKNOWN')).upper()
+        if tl == "GREEN": tl_icon = "🟢"
+        elif tl == "ORANGE": tl_icon = "🟠"
+        elif tl == "RED": tl_icon = "🔴"
+        else: tl_icon = "⚪"
+        v5_headline = f"{tl_icon} {tl} (Score: {macro.get('macro_score', 50.0):.1f}/100, State: {reg_state})"
 
-## 🚨 Active Alerts
-{alert_lines}
+    sec_b = f"""## B) Macro Regime (V5 Models)
+{v5_headline}
+- **Regime State**: {reg_state}
+- **P(Bull)**: {fmt_pct(macro.get('p_bull'))}
+- **P(Drawdown 10%)**: {fmt_pct(macro.get('p_drawdown_10'))}
+- **P(Drawdown 20%)**: {fmt_pct(macro.get('p_drawdown_20'))}
+- **P(Drawdown Composite)**: {fmt_pct(macro.get('p_drawdown_composite'))}
+- **Buy The Dip Ok?**: {macro.get('buy_the_dip_ok', False)}
+- **Recommended Action**: {macro.get('recommended_action', 'HOLD')}
+"""
 
+    # --- C) Market State (Heuristic) ---
+    ms_score = market_state.get('risk_score', 'N/A')
+    ms_color = str(market_state.get('color', 'UNKNOWN')).upper()
+    if ms_color == "GREEN": ms_icon = "🟢"
+    elif ms_color == "ORANGE": ms_icon = "🟠"
+    elif ms_color == "RED": ms_icon = "🔴"
+    else: ms_icon = "⚪"
+    
+    sub_scores = market_state.get('sub_scores', {})
+    ss_str = ""
+    for k, v in sub_scores.items():
+        ss_str += f"  - {k}: {v.get('score','N/A')}/100 ({str(v.get('color','')).upper()})\n"
+        
+    inds = market_state.get('indicators', {})
+    ind_str = ""
+    for k, v in inds.items():
+        if isinstance(v, float) and 0.0 <= v <= 1.0 and ("risk" in k or "prob" in k):
+            ind_str += f"  - {k}: {fmt_pct(v)}\n"
+        else:
+            ind_str += f"  - {k}: {v}\n"
+            
+    r_probs = market_state.get('regime_probabilities', {})
+    rp_str = ""
+    for k, v in r_probs.items():
+        rp_str += f"  - {k}: {fmt_pct(v)}\n"
+
+    sec_c = f"""## C) Market State (Heuristic Explainability)
+- **Heuristic Score**: {ms_score}/100 {ms_icon}
+- **Sub Scores**:
+{ss_str}
+- **Indicators**:
+{ind_str}
+- **Regime Probabilities**:
+{rp_str}
+"""
+
+    # --- Assemble ---
+    port_sum = portfolio_state.get('portfolio_summary', {})
+    cash_val = port_sum.get('cash_pct', portfolio_state.get('cash_pct', 0.0))
+    
+    headline_state = reg_state if not is_degenerate else "UNKNOWN"
+
+    md_content = f"""# Portfolio Run Report ({ts_str})
+{wiring_status}
+## 🧭 Regime Positioning
+- **Target Posture**: {headline_state}
+- **Cash Position**: {fmt_pct(cash_val)}
+
+{sec_a}
+{sec_b}
+{sec_c}
 *Note: This report is a lightweight human-readable version of the deterministic pipeline artifacts.*
 """
     
