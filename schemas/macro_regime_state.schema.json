@@ -74,12 +74,17 @@
                     "minimum": 0,
                     "maximum": 1
                 },
-                "regime_label": {
-                    "type": "integer",
-                    "enum": [
-                        0,
-                        1
-                    ]
+                "bull_idx": {
+                    "type": "integer"
+                },
+                "bear_idx": {
+                    "type": "integer"
+                },
+                "regime_most_likely_idx": {
+                    "type": "integer"
+                },
+                "most_likely_is_bull": {
+                    "type": "boolean"
                 },
                 "diagnostics": {
                     "type": "object",
@@ -101,21 +106,59 @@
                     "additionalProperties": {
                         "type": "number"
                     }
+                },
+                "regime_stats": {
+                    "type": "object",
+                    "properties": {
+                        "means": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        },
+                        "variances": {
+                            "type": "array",
+                            "items": {
+                                "type": "number"
+                            }
+                        },
+                        "mean_variance_switching": {
+                            "type": "boolean"
+                        },
+                        "switching_variance": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
                 }
             },
             "required": [
                 "p_bull",
                 "p_bear",
-                "regime_label",
+                "bull_idx",
+                "bear_idx",
+                "regime_most_likely_idx",
+                "most_likely_is_bull",
                 "diagnostics",
-                "params"
+                "params",
+                "regime_stats"
             ],
             "additionalProperties": false
         },
         "model_events": {
             "type": "object",
             "properties": {
+                "p_drawdown_10": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
                 "p_drawdown_20": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "p_drawdown_composite": {
                     "type": "number",
                     "minimum": 0,
                     "maximum": 1
@@ -125,6 +168,11 @@
                     "minimum": 1
                 },
                 "p_recession": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "dd20_positive_rate_train": {
                     "type": "number",
                     "minimum": 0,
                     "maximum": 1
@@ -140,7 +188,10 @@
                 }
             },
             "required": [
+                "p_drawdown_10",
                 "p_drawdown_20",
+                "p_drawdown_composite",
+                "dd20_positive_rate_train",
                 "horizon_days"
             ],
             "additionalProperties": false
@@ -185,6 +236,35 @@
             ],
             "additionalProperties": false
         },
+        "sanity_checks": {
+            "type": "object",
+            "properties": {
+                "markov_probs_sum": {
+                    "type": "number"
+                },
+                "markov_is_degenerate": {
+                    "type": "boolean"
+                },
+                "events_is_degenerate": {
+                    "type": "boolean"
+                },
+                "dd20_positive_rate_train": {
+                    "type": "number"
+                },
+                "missing_key_features_count": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "markov_probs_sum",
+                "markov_is_degenerate",
+                "events_is_degenerate",
+                "dd20_positive_rate_train",
+                "missing_key_features_count"
+            ],
+            "additionalProperties": false
+        },
         "flags": {
             "type": "array",
             "items": {
@@ -200,6 +280,7 @@
         "model_markov",
         "model_events",
         "aggregate",
+        "sanity_checks",
         "flags"
     ],
     "additionalProperties": false

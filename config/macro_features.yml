@@ -31,14 +31,14 @@ features:
     source: "fred"
     frequency: "daily"
     type: "spread"
-    transform: "level"
+    transform: "zscore_52w"
     release_lag_days: 1
 
   - name: "VIXCLS"
     source: "fred"
     frequency: "daily"
     type: "volatility"
-    transform: "level"
+    transform: "zscore_52w"
     release_lag_days: 1
 
   - name: "WM2NS" # M2 Money Stock
@@ -88,10 +88,12 @@ qualitative_dummies:
     condition: "TERM_SPREAD_10Y_3M < 0.0"
   
   - name: "VOL_STRESS"
-    condition: "VIXCLS > 25.0"
+    condition: "VIXCLS_zscore_52w > 1.25"
     
   - name: "CREDIT_STRESS"
-    condition: "BAMLH0A0HYM2 > 5.5"
+    condition: "BAMLH0A0HYM2_zscore_52w > 1.25"
 
   - name: "POLICY_TIGHTENING"
-    condition: "DGS2_diff_21d > 0.5" # Rate momentum proxy
+    # Conservative proxy: 2Y rate unusually high vs its own recent distribution
+    # (avoids relying on a missing diff_21d feature)
+    condition: "DGS2_zscore > 1.0"

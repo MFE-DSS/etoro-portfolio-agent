@@ -47,27 +47,48 @@ def fit_markov_model(df: pd.DataFrame, config: Dict[str, Any]) -> Tuple[Dict[str
         method = config.get("search_method", "ncg")
         res = model.fit(method=method, maxiter=config.get("max_iterations", 100), disp=False)
         
-        # Determine which regime is bull/bear (or low vol/high vol)
-        # We classify regime 0 vs 1 by comparing their smoothed variances.
-        # Regime with lower variance is usually the "bull" or "normal" regime.
-        if target_variance:
-            v0 = res.params.get('sigma2[0]', 0)
-            v1 = res.params.get('sigma2[1]', 0)
-            bull_idx = 0 if v0 < v1 else 1
-        else:
-            # If mean switching, use means
-            m0 = res.params.get('const[0]', 0)
-            m1 = res.params.get('const[1]', 0)
-            bull_idx = 0 if m0 > m1 else 1
-            
-        bear_idx = 1 - bull_idx
-        
-        # Get smoothed probabilities for the latest date
-        latest_probs = res.smoothed_marginal_probabilities.iloc[-1]
-        p_bull = float(latest_probs.iloc[bull_idx])
-        p_bear = float(latest_probs.iloc[bear_idx])
-        regime_label = int(np.argmax([latest_probs.iloc[0], latest_probs.iloc[1]]))
-        
+        # Smoothed probabilities per regime (in-sample)
+        smoothed = res.smoothed_marginal_probabilities
+        # Last date probabilities (as-of end of sample)
+        last_probs = smoothed.iloc[-1].to_dict()
+
+        bull_idx = None
+        bear_idx = None
+
+        try:
+            # Compute weighted means & variances by regime using smoothed probs (robust proxy)
+            regime_means = []
+            regime_vars = []
+            rets = y
+            for k in range(k_regimes):
+                w = smoothed[k].values.astype(float)
+                w = np.clip(w, 1e-6, 1.0)
+                w = w / w.sum()
+                mu = float(np.sum(w * rets.values))
+                var = float(np.sum(w * (rets.values - mu) ** 2))
+                regime_means.append(mu)
+                regime_vars.append(var)
+
+            if target_trend == 'c':
+                bull_idx = int(np.argmax(regime_means))
+                bear_idx = int(np.argmin(regime_means))
+            else:
+                # variance-only proxy
+                bull_idx = int(np.argmin(regime_vars))
+                bear_idx = int(np.argmax(regime_vars))
+        except Exception:
+            bull_idx = 0
+            bear_idx = 1 if k_regimes > 1 else 0
+
+        # Probabilities as-of last sample date
+        p_bull = float(last_probs.get(bull_idx, np.nan))
+        p_bear = float(last_probs.get(bear_idx, np.nan))
+
+        # Native most likely regime (argmax) at last date
+        # Keep it separate from "bull/bear" mapping to avoid confusion.
+        regime_most_likely_idx = int(max(last_probs, key=last_probs.get))
+        most_likely_is_bull = bool(regime_most_likely_idx == bull_idx)
+
         diagnostics = {
             "loglik": float(res.llf),
             "aic": float(res.aic),
@@ -80,9 +101,18 @@ def fit_markov_model(df: pd.DataFrame, config: Dict[str, Any]) -> Tuple[Dict[str
         output = {
             "p_bull": p_bull,
             "p_bear": p_bear,
-            "regime_label": regime_label, # Native model label (might not map 1:1 to bull/bear semantically without index lookup, but useful for logs)
+            "bull_idx": int(bull_idx),
+            "bear_idx": int(bear_idx),
+            "regime_most_likely_idx": int(regime_most_likely_idx),
+            "most_likely_is_bull": most_likely_is_bull,
             "diagnostics": diagnostics,
-            "params": params_dict
+            "params": params_dict,
+            "regime_stats": {
+                "means": [float(x) for x in (regime_means if "regime_means" in locals() else [])],
+                "variances": [float(x) for x in (regime_vars if "regime_vars" in locals() else [])],
+                "mean_variance_switching": bool(target_trend == 'c'),
+                "switching_variance": bool(target_variance),
+            }
         }
         
         return output, res

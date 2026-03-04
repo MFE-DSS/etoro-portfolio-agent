@@ -8,11 +8,33 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+from pandas.tseries.offsets import BDay
+
+DEFAULT_TZ = "UTC"
+
+def _ensure_datetime_index(series: pd.Series) -> pd.Series:
+    s = series.copy()
+    if not isinstance(s.index, pd.DatetimeIndex):
+        s.index = pd.to_datetime(s.index)
+    # Normalize to midnight to avoid accidental time drift across joins
+    if s.index.tz is not None:
+        s.index = s.index.tz_convert(None)
+    s.index = s.index.normalize()
+    return s.sort_index()
+
+def _shift_index_business_days(idx: pd.DatetimeIndex, lag_days: int) -> pd.DatetimeIndex:
+    """
+    Apply conservative availability lag in BUSINESS DAYS (not calendar days),
+    so that weekend/holiday effects do not create inconsistent effective lags.
+    """
+    if lag_days <= 0:
+        return idx
+    return (idx + BDay(lag_days)).normalize()
+
 def generate_trading_calendar(start_date: str, end_date: str) -> pd.DatetimeIndex:
     """Generate a daily business day calendar, excluding weekends."""
-    # For a robust production app, use pandas_market_calendars.
-    # Here we stick to BDay as a solid proxy for daily trading calendar.
-    return pd.bdate_range(start=start_date, end=end_date)
+    idx = pd.bdate_range(start=start_date, end=end_date)
+    return idx.normalize()
 
 def align_and_lag_series(
     raw_data: Dict[str, pd.Series],
@@ -43,23 +65,20 @@ def align_and_lag_series(
         else:
             lag_days = conf.get("release_lag_days", 1)
             
-        # Timezone naive conversion for safety if needed
-        if series.index.tz is not None:
-            series.index = series.index.tz_localize(None)
+        s = _ensure_datetime_index(series)
             
-        # 1. Shift the index by lag_days
-        # For daily data, a shift of +1 day means the value known at T is stamped as available on T+1
-        # We add calendar days. 
-        shifted_index = series.index + pd.Timedelta(days=lag_days)
-        shifted_series = pd.Series(series.values, index=shifted_index)
-        
-        # Handle duplicates if multiple updates land on the same shifted day (unlikely but possible with weird raw data)
+        # 1. Shift the index by lag_days using BUSINESS DAYS
+        if lag_days > 0:
+            shifted_index = _shift_index_business_days(s.index, int(lag_days))
+            shifted_series = pd.Series(s.values, index=shifted_index)
+        else:
+            shifted_series = pd.Series(s.values, index=s.index)
+            
+        # Handle duplicates
         shifted_series = shifted_series[~shifted_series.index.duplicated(keep='last')]
+        shifted_series = shifted_series.sort_index()
         
         # 2. Reindex onto the daily trading calendar
-        # We use reindex with method='ffill' to carry forward the last KNOWN value.
-        # Since the timestamps were already shifted forward into the future by release lag,
-        # ffill here only propagates data *after* its official release date proxy.
         aligned_series = shifted_series.reindex(df.index, method='ffill')
         
         df[name] = aligned_series

@@ -16,4 +16,4 @@ The V5 layer design choices enforce rigorous quantitative constraints based on t
 
 4. **Rapach, D. E., Strauss, J. K., & Zhou, G. (2010). "Out-of-Sample Equity Premium Prediction: Combination Forecasts and Links to the Real Economy."**
    _The Review of Financial Studies_, 23(2), 821-862.
-   *Application:* Shows that combining relatively weak individual forecasts yields a statistically superior meta-forecast. Our `ensemble_scoring` weighting scheme pools the Markov Regime unobserved state probabilities with the Probit Event probabilities.
+   *Application:* Shows that combining relatively weak individual forecasts yields a statistically superior meta-forecast. Our `ensemble_scoring` weighting scheme pools the Markov Regime unobserved state probabilities with the L2-regularized Logistic Regression Event probabilities.

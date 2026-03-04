@@ -9,17 +9,18 @@ The V5 macro layer introduces state-of-the-art out-of-sample predictability tech
 
 ### 2.1 Stationarity & Feature Engineering
 Macroeconomic variables (Non-farm payrolls, CPI, Term Spread, VIX) arrive at varying frequencies (daily, weekly, monthly).
-- The pipeline utilizes a strict `release_lag_days` policy. Observations are forward-filled in the calendar *only after* their realistic proxy release date has passed (e.g. CPI + 15 days).
+- The pipeline utilizes a strict `release_lag_days` policy. Observations are forward-filled in the calendar *only after* their realistic proxy release date has passed.
+- **CRITICAL:** `release_lag_days` are interpreted as **BUSINESS DAYS** (not calendar days). This ensures that weekend/holiday effects do not create inconsistent effective lags, keeping the "as-of" availability completely stable.
 - Stationarity transforms (Year-over-Year %, 52-week Z-scores, differences) are applied, followed by rolling empirical winsorization to curb outlier dominance.
 
 ### 2.2 Markov Switching Regime Model
 Based on the foundational work by Hamilton (1989), the system fits a Markov Switching model (via `statsmodels`) on the target index (QQQ log returns). 
-- We configure a 2-regime Variance-Switching process.
-- Produces `p_bull` and `p_bear` by examining the real-time smoothed marginal probabilities, identifying the lower-variance state as the "normal/bull" regime.
+- We configure a 2-regime process, prioritizing Mean & Variance switching by default. This is more informative for macro swing regimes than variance-only switching.
+- Produces explicit `bull_idx` and `bear_idx` states by computing robust weighted means and variances using smoothed probabilities, removing ambiguity over regime assignments.
 
-### 2.3 Event Probit Ensembles
+### 2.3 Event Models (L2 Logistic Regression)
 Predicting extreme events like a forward 20% drawdown requires handling sparse targets.
-- Uses L2 Regularized Logistic Regression (probit proxy) trained on lagged macro features.
+- Uses **L2 Regularized Logistic Regression** (often colloquially referred to as a probit proxy, though strictly it is Logistic) trained on lagged macro features.
 - Generates `p_drawdown_20` (probability of a >20% max DD in the next 63 days) and `p_recession`.
 - Following Campbell & Thompson (2008) and Goyal & Welch (2008), we impose heavy constraints (L2 regularization) to prevent the feature set from overfitting historical noise.
 

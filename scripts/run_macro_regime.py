@@ -99,8 +99,8 @@ def main():
             "transforms_applied": list(set([f.get("transform", "level") for f in cfg_feats.get("features", [])])),
             "lags_applied": [f"{f['name']}:{f.get('release_lag_days', 1)}" for f in cfg_feats.get("features", [])]
         },
-        "model_markov": markov_res or {"p_bull":0.5, "p_bear":0.5, "regime_label":0, "diagnostics":{"loglik":0,"aic":0,"bic":0}, "params":{}},
-        "model_events": event_res or {"horizon_days":63, "p_drawdown_20":0.0, "p_recession":0.0, "coefficients":{}, "regularization_C":1.0},
+        "model_markov": markov_res or {"p_bull":0.5, "p_bear":0.5, "bull_idx":0, "bear_idx":1, "regime_most_likely_idx":0, "most_likely_is_bull":True, "diagnostics":{"loglik":0,"aic":0,"bic":0}, "params":{}, "regime_stats":{"means":[0,0],"variances":[0,0],"mean_variance_switching":True,"switching_variance":True}},
+        "model_events": event_res or {"horizon_days":63, "p_drawdown_10":0.0, "p_drawdown_20":0.0, "p_drawdown_composite":0.0, "p_recession":0.0, "dd20_positive_rate_train":0.0, "coefficients":{}, "regularization_C":1.0},
         "aggregate": {
             "macro_score_0_100": final_res.get("macro_score_0_100", 50.0),
             "regime_state": final_res.get("regime_state", "NEUTRAL"),
@@ -108,7 +108,14 @@ def main():
             "buy_the_dip_ok": final_res.get("buy_the_dip_ok", False),
             "recommended_action": final_res.get("recommended_action", "HOLD")
         },
-        "flags": ["SUCCESS", "V5_MACRO_ACTIVE"]
+        "sanity_checks": final_res.get("sanity_checks", {
+            "markov_probs_sum": 0.0,
+            "markov_is_degenerate": True,
+            "events_is_degenerate": True,
+            "dd20_positive_rate_train": 0.0,
+            "missing_key_features_count": 0
+        }),
+        "flags": ["SUCCESS", "V5_MACRO_ACTIVE"] + final_res.get("signal_flags", [])
     }
     
     if not markov_res or not event_res:

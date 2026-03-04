@@ -14,8 +14,8 @@ event_probit:
   max_iter: 1000
   features:
     - TERM_SPREAD_10Y_3M
-    - VIXCLS
-    - BAMLH0A0HYM2
+    - VIXCLS_zscore_52w
+    - BAMLH0A0HYM2_zscore_52w
     - UNRATE_diff
     - YIELD_CURVE_INVERTED
     - VOL_STRESS

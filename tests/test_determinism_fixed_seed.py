@@ -39,4 +39,4 @@ def test_markov_model_determinism():
     
     assert np.isclose(res1["p_bull"], res2["p_bull"], atol=1e-5)
     assert np.isclose(res1["p_bear"], res2["p_bear"], atol=1e-5)
-    assert res1["regime_label"] == res2["regime_label"]
+    assert res1["regime_most_likely_idx"] == res2["regime_most_likely_idx"]

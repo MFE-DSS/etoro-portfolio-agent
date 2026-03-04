@@ -15,6 +15,7 @@ def create_event_targets(df: pd.DataFrame, horizon_days: int = 63, drawdown_thre
     """
     Creates target variables for the event models.
     DRAWDOWN_20_FWD: 1 if max drawdown over next `horizon_days` exceeds `drawdown_threshold`.
+    DRAWDOWN_10_FWD: 1 if max drawdown over next `horizon_days` exceeds -0.10.
     RECESSION_PROXY: Current USREC (lagged proxy applied by features, but here we just use USREC directly if asked to predict it). 
                      Actually, a true forecast would predict USREC shifted backward. For now, assuming user wants probability of *future* DD, and current recession probability from real-time data.
     """
@@ -33,9 +34,11 @@ def create_event_targets(df: pd.DataFrame, horizon_days: int = 63, drawdown_thre
         
         fwd_returns = forward_min / prices - 1.0
         y_df["DRAWDOWN_20_FWD"] = (fwd_returns <= drawdown_threshold).astype(int)
+        y_df["DRAWDOWN_10_FWD"] = (fwd_returns <= -0.10).astype(int)
         
         # Nullify the last `horizon_days` rows since we don't know the forward outcome yet
         y_df.loc[y_df.index[-horizon_days]:, "DRAWDOWN_20_FWD"] = np.nan
+        y_df.loc[y_df.index[-horizon_days]:, "DRAWDOWN_10_FWD"] = np.nan
         
     if "USREC" in df.columns:
         # Predict if in recession next month (~21 days)
@@ -64,8 +67,11 @@ def fit_event_probit(df: pd.DataFrame, config: Dict[str, Any]) -> Dict[str, Any]
         
     out = {
         "horizon_days": horizon,
+        "p_drawdown_10": 0.0,
         "p_drawdown_20": 0.0,
+        "p_drawdown_composite": 0.0,
         "p_recession": 0.0,
+        "dd20_positive_rate_train": 0.0,
         "coefficients": {},
         "regularization_C": C_reg
     }
@@ -93,14 +99,39 @@ def fit_event_probit(df: pd.DataFrame, config: Dict[str, Any]) -> Dict[str, Any]
             
             p_dd = model_dd.predict_proba(X_today_scaled)[0, 1]
             out["p_drawdown_20"] = float(p_dd)
+            out["dd20_positive_rate_train"] = float(y_train.mean())
             
-            out["coefficients"]["drawdown"] = {
+            out["coefficients"]["drawdown_20"] = {
                 feat: float(coef) for feat, coef in zip(X_cols, model_dd.coef_[0])
             }
         else:
             logger.warning("Insufficient data or positive cases to fit Drawdown Event model.")
             
-    # 2. Fit Recession prediction (if available)
+    # 2. Fit Drawdown 10 prediction
+    if "DRAWDOWN_10_FWD" in targets.columns:
+        mask = targets["DRAWDOWN_10_FWD"].notna() & X_raw.notna().all(axis=1)
+        X_train = X_raw[mask]
+        y_train = targets.loc[mask, "DRAWDOWN_10_FWD"]
+        
+        if len(X_train) > 252 and y_train.sum() > 5:
+            X_scaled = scaler.fit_transform(X_train)
+            model_dd10 = LogisticRegression(penalty='l2', C=C_reg, solver='lbfgs', max_iter=1000)
+            model_dd10.fit(X_scaled, y_train)
+            
+            X_today = X_raw.iloc[[-1]].copy()
+            X_today.fillna(X_raw.mean(), inplace=True)
+            X_today_scaled = scaler.transform(X_today)
+            
+            p_dd10 = model_dd10.predict_proba(X_today_scaled)[0, 1]
+            out["p_drawdown_10"] = float(p_dd10)
+            
+            out["coefficients"]["drawdown_10"] = {
+                feat: float(coef) for feat, coef in zip(X_cols, model_dd10.coef_[0])
+            }
+
+    out["p_drawdown_composite"] = 0.7 * out["p_drawdown_20"] + 0.3 * out["p_drawdown_10"]
+
+    # 3. Fit Recession prediction (if available)
     if "RECESSION_FWD" in targets.columns:
         mask = targets["RECESSION_FWD"].notna() & X_raw.notna().all(axis=1)
         X_train = X_raw[mask]

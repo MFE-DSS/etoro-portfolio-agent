@@ -95,7 +95,9 @@ def build_portfolio_state(snapshot: Dict[str, Any], market_state: Dict[str, Any]
         "regime_state": "UNKNOWN",
         "macro_score": 50.0,
         "traffic_light": market_state.get("color", "unknown").upper(),
+        "p_drawdown_10": 0.0,
         "p_drawdown_20": 0.0,
+        "p_drawdown_composite": 0.0,
         "p_bull": 0.5,
         "buy_the_dip_ok": False,
         "recommended_action": "HOLD"

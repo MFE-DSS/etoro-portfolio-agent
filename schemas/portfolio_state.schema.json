@@ -108,7 +108,17 @@
                                 "RED"
                             ]
                         },
+                        "p_drawdown_10": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
                         "p_drawdown_20": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                        },
+                        "p_drawdown_composite": {
                             "type": "number",
                             "minimum": 0,
                             "maximum": 1
@@ -129,7 +139,9 @@
                         "regime_state",
                         "macro_score",
                         "traffic_light",
+                        "p_drawdown_10",
                         "p_drawdown_20",
+                        "p_drawdown_composite",
                         "p_bull",
                         "buy_the_dip_ok",
                         "recommended_action"
