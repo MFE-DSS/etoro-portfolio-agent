@@ -1,5 +1,6 @@
 # V5 Macro-Regime Econometrics Layer
 
+> **Note:** The final output of the V5 pipeline is the "Macro Posture Brief (BETA)". This report focuses solely on macro-regime signalling and action sets. Portfolio diagnostics and holding details have been intentionally removed by design in BETA.
 This document outlines the architecture and methodologies of the V5 Macro-Regime Econometrics Layer integrated into the eToro Portfolio Agent.
 
 ## 1. Overview

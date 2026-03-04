@@ -14,7 +14,10 @@ def test_generate_markdown_report_formatting(tmp_path):
         "risk_score": 62,
         "color": "orange",
         "sub_scores": {"inflation": {"score": 80, "color": "orange"}},
-        "indicators": {"VIX": 20.0, "recession_risk": 0.15},
+        "indicators": {
+            "volatility": {"vix_level": 20.0},
+            "recession_risk": 0.15
+        },
         "regime_probabilities": {"bull": 0.6}
     }
     portfolio_state = {
@@ -59,22 +62,22 @@ def test_generate_markdown_report_formatting(tmp_path):
         
         print("---START OUTPUT---\n" + content + "\n---END OUTPUT---")
         
-        # 1) Check cash percentage formatting
-        assert "16.4%" in content, "cash_pct not formatted correctly"
+        # 1) Check formatting, cash_pct is omitted directly as a pct but exists in Risk Budget
+        assert "16%" in content, "cash_pct not formatted correctly in risk budget"
         assert "0.16" not in content, "cash_pct printed as raw float"
         
-        # 2) Check regime headline relies on V5 state (which is UNKNOWN due to degeneracy)
-        # Why is it degenerate? Because p_drawdown_20 and p_drawdown_10 are both 0.0
-        assert "V5 status: DEGRADED (probabilities degenerate)" in content
-        assert "Target Posture**: UNKNOWN" in content
+        # 2) Check regime posture doesn't come from health_score but from heuristic logic because B is unusable
+        # market_state risk_score = 62 -> NEUTRAL
+        assert "Posture**: **NEUTRAL**" in content
+        assert "Wiring Status: V5 Present=Yes, Usable=No" in content
         
-        # 3) Check that Macro Regime is printed
-        assert "B) Macro Regime" in content
+        # 3) Check Rationale Section
+        assert "2. Rationale (Market Pricing)" in content
+        assert "**VIX**: 20.00 vs <20 calm, >25 stress" in content
         
-        # 4) Check C Market State formatted correctly
-        assert "Heuristic Score**: 62" in content
-        assert "15.0%" in content # recession_risk
-        assert "60.0%" in content # regime_probabilities bull
+        # 4) Check Sections exist
+        assert "3. Regime Risks" in content
+        assert "4. What would change my mind?" in content
         
         # Test a healthy V5 scenario
         portfolio_state["risk_overlay"]["macro_regime"]["p_drawdown_20"] = 0.1
@@ -82,8 +85,8 @@ def test_generate_markdown_report_formatting(tmp_path):
         with open(report_path2, "r") as f:
             content2 = f.read()
             
-        assert "V5 status: DEGRADED" not in content2
-        assert "Target Posture**: RISK_ON" in content2
+        assert "Wiring Status: V5 Present=Yes, Usable=Yes" in content2
+        assert "Posture**: **RISK-ON**" in content2
         
     finally:
         pub.os.path.join = original_join
