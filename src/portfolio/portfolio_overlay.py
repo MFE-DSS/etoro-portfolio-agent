@@ -94,7 +94,7 @@ def build_portfolio_state(snapshot: Dict[str, Any], market_state: Dict[str, Any]
     macro_regime_payload = market_state.get("macro_regime", {
         "regime_state": "UNKNOWN",
         "macro_score": 50.0,
-        "traffic_light": market_state.get("color", "unknown"),
+        "traffic_light": market_state.get("color", "unknown").upper(),
         "p_drawdown_20": 0.0,
         "p_bull": 0.5,
         "buy_the_dip_ok": False,
