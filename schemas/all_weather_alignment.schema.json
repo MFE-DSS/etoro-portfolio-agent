@@ -1,0 +1,308 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "All-Weather Alignment Engine Output Schema",
+    "type": "object",
+    "properties": {
+        "timestamp_utc": {
+            "type": "string"
+        },
+        "asof_date": {
+            "type": "string"
+        },
+        "inputs": {
+            "type": "object",
+            "properties": {
+                "core_regime_timestamp_utc": {
+                    "type": "string"
+                },
+                "portfolio_snapshot_timestamp_utc": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "core_regime_timestamp_utc",
+                "portfolio_snapshot_timestamp_utc"
+            ],
+            "additionalProperties": false
+        },
+        "macro_regime": {
+            "type": "object",
+            "properties": {
+                "regime_base": {
+                    "type": "string"
+                },
+                "regime_overlay": {
+                    "type": "string"
+                },
+                "confidence": {
+                    "type": "integer"
+                },
+                "core_bucket_percent_of_total": {
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "regime_base",
+                "regime_overlay",
+                "confidence",
+                "core_bucket_percent_of_total"
+            ],
+            "additionalProperties": false
+        },
+        "alignment_quality": {
+            "type": "object",
+            "properties": {
+                "mapping_coverage_pct": {
+                    "type": "number"
+                },
+                "unknown_weight_pct": {
+                    "type": "number"
+                },
+                "quality_label": {
+                    "type": "string",
+                    "enum": [
+                        "HIGH",
+                        "MEDIUM",
+                        "LOW"
+                    ]
+                },
+                "flags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "mapping_coverage_pct",
+                "unknown_weight_pct",
+                "quality_label",
+                "flags"
+            ],
+            "additionalProperties": false
+        },
+        "target_weights_total_pct": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string"
+                    },
+                    "target": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "asset",
+                    "target"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "actual_weights_total_pct": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string"
+                    },
+                    "actual": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "asset",
+                    "actual"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "gaps_total_pct": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "asset": {
+                        "type": "string"
+                    },
+                    "gap": {
+                        "type": "number"
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": [
+                            "ADD",
+                            "TRIM",
+                            "HOLD"
+                        ]
+                    },
+                    "suggested_step_pct": {
+                        "type": "number"
+                    }
+                },
+                "required": [
+                    "asset",
+                    "gap",
+                    "action",
+                    "suggested_step_pct"
+                ],
+                "additionalProperties": false
+            }
+        },
+        "posture": {
+            "type": "object",
+            "properties": {
+                "posture": {
+                    "type": "string",
+                    "enum": [
+                        "RISK_ON",
+                        "NEUTRAL",
+                        "RISK_OFF"
+                    ]
+                },
+                "confidence_label": {
+                    "type": "string",
+                    "enum": [
+                        "HIGH",
+                        "MEDIUM",
+                        "LOW"
+                    ]
+                },
+                "posture_conflict": {
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "posture",
+                "confidence_label",
+                "posture_conflict"
+            ],
+            "additionalProperties": false
+        },
+        "recommended_actions": {
+            "type": "object",
+            "properties": {
+                "top_3_actions": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "action": {
+                                "type": "string",
+                                "enum": [
+                                    "ADD",
+                                    "TRIM",
+                                    "HOLD"
+                                ]
+                            },
+                            "asset": {
+                                "type": "string"
+                            },
+                            "why": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "action",
+                            "asset",
+                            "why"
+                        ],
+                        "additionalProperties": false
+                    }
+                },
+                "rebalance_style": {
+                    "type": "string",
+                    "enum": [
+                        "ONE_STEP",
+                        "MULTI_STEP"
+                    ]
+                },
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "top_3_actions",
+                "rebalance_style",
+                "notes"
+            ],
+            "additionalProperties": false
+        },
+        "optional_trade_list": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "reason_disabled": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "trades": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "ticker": {
+                                "type": "string"
+                            },
+                            "side": {
+                                "type": "string",
+                                "enum": [
+                                    "BUY",
+                                    "SELL"
+                                ]
+                            },
+                            "pct_points": {
+                                "type": "number"
+                            },
+                            "mapped_asset": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "ticker",
+                            "side",
+                            "pct_points",
+                            "mapped_asset"
+                        ],
+                        "additionalProperties": false
+                    }
+                }
+            },
+            "required": [
+                "enabled",
+                "reason_disabled"
+            ],
+            "additionalProperties": false
+        },
+        "brief_bullets": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        }
+    },
+    "required": [
+        "timestamp_utc",
+        "asof_date",
+        "inputs",
+        "macro_regime",
+        "alignment_quality",
+        "target_weights_total_pct",
+        "actual_weights_total_pct",
+        "gaps_total_pct",
+        "posture",
+        "recommended_actions",
+        "optional_trade_list",
+        "brief_bullets"
+    ],
+    "additionalProperties": false
+}

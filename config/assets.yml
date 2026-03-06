@@ -14,6 +14,7 @@ AAPL:
   asset_type: "Equity"
   role: "core"
   factor_bucket: "us_growth"
+  asset_class_all_weather: "Global Equities - Quality"
 
 MSFT:
   name: "Microsoft Corporation"
@@ -22,6 +23,7 @@ MSFT:
   asset_type: "Equity"
   role: "core"
   factor_bucket: "us_growth"
+  asset_class_all_weather: "Global Equities - Quality"
 
 JNJ:
   name: "Johnson & Johnson"
@@ -30,6 +32,7 @@ JNJ:
   asset_type: "Equity"
   role: "core"
   factor_bucket: "defensives"
+  asset_class_all_weather: "Defensive Equities"
 
 XOM:
   name: "Exxon Mobil Corporation"
@@ -38,6 +41,7 @@ XOM:
   asset_type: "Equity"
   role: "core"
   factor_bucket: "energy"
+  asset_class_all_weather: "Energy Tilt"
 
 GLD:
   name: "SPDR Gold Shares"
@@ -46,6 +50,7 @@ GLD:
   asset_type: "ETF"
   role: "hedge"
   factor_bucket: "commodities"
+  asset_class_all_weather: "Gold"
 
 BTC:
   name: "Bitcoin"
@@ -62,6 +67,7 @@ TLT:
   asset_type: "ETF"
   role: "hedge"
   factor_bucket: "rates_sensitive"
+  asset_class_all_weather: "Duration (Bonds)"
 
 V:
   name: "Visa Inc."
@@ -70,3 +76,4 @@ V:
   asset_type: "Equity"
   role: "core"
   factor_bucket: "quality"
+  asset_class_all_weather: "Global Equities - Quality"
