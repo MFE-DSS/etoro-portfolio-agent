@@ -55,7 +55,7 @@ def test_generate_markdown_report_formatting(tmp_path):
     pub.os.path.join = mock_join
     
     try:
-        report_path = pub.generate_markdown_report("2026-03-04T120000", summary, alerts, market_state, portfolio_state)
+        report_path = pub.generate_markdown_report("2026-03-04T120000", summary, alerts, market_state, portfolio_state, None)
 
         with open(report_path, "r") as f:
             content = f.read()
@@ -81,12 +81,39 @@ def test_generate_markdown_report_formatting(tmp_path):
         
         # Test a healthy V5 scenario
         portfolio_state["risk_overlay"]["macro_regime"]["p_drawdown_20"] = 0.1
-        report_path2 = pub.generate_markdown_report("2026-03-04T120001", summary, alerts, market_state, portfolio_state)
+        report_path2 = pub.generate_markdown_report("2026-03-04T120001", summary, alerts, market_state, portfolio_state, None)
         with open(report_path2, "r") as f:
             content2 = f.read()
             
         assert "Wiring Status: V5 Present=Yes, Usable=Yes" in content2
         assert "Posture**: **RISK-ON**" in content2
+
+        # Test All-Weather Alignment parsing
+        all_weather_alignment = {
+            "posture": {"posture": "RISK_OFF", "confidence_label": "HIGH", "posture_conflict": True},
+            "brief_bullets": [
+                "Derived posture 'RISK_OFF' (HIGH confidence) mapped from regime 'Stagflation'.",
+                "CRITICAL: Portfolio alignment strongly diverges from the safety requirements of the active regime.",
+                "Alignment Quality is MEDIUM (2.0% of portfolio lacks class mappings)."
+            ],
+            "recommended_actions": {
+                "top_3_actions": [
+                    {"action": "TRIM", "asset": "Global Equities - Quality", "why": "Overweight target by 15.0%"}
+                ],
+                "notes": ["CRITICAL: Severe posture conflict detected. Address risk exposures immediately."]
+            }
+        }
+        
+        report_path3 = pub.generate_markdown_report("2026-03-04T120002", summary, alerts, market_state, portfolio_state, all_weather_alignment)
+        with open(report_path3, "r") as f:
+            content3 = f.read()
+
+        assert "Posture**: **RISK_OFF**" in content3
+        assert "Confidence**: High" in content3
+        assert "Derived posture 'RISK_OFF'" in content3
+        assert "## 0. All-Weather Alignment" in content3
+        assert "- CRITICAL: Portfolio alignment strongly diverges" in content3
+        assert "- TRIM Global Equities - Quality (Overweight" in content3
         
     finally:
         pub.os.path.join = original_join

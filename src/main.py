@@ -157,7 +157,59 @@ def main():
         logger.info("Creating run bundle and publishing artifacts...")
         bundle_dir = create_run_bundle(ts_str, ts_iso, snapshot, market_state, portfolio_state, decisions, summary, alerts)
         zip_path = zip_run_bundle(bundle_dir)
-        report_path = generate_markdown_report(ts_str, summary, alerts, market_state, portfolio_state)
+        
+        # Optionally run All-Weather Alignment if core_regime is available (we derive it from market_state if possible)
+        all_weather_alignment = None
+        try:
+            from src.all_weather_alignment.target_builder import build_target_weights
+            from src.all_weather_alignment.aggregator import aggregate_actual_weights
+            from src.all_weather_alignment.mapper import load_assets_mapping, map_snapshot_to_classes
+            from src.all_weather_alignment.reconciler import compute_alignment, build_ticker_trades
+            from src.all_weather_alignment.writer import build_alignment_artifact
+            
+            # Use market_state or try loading a core_regime if the pipeline produces one.
+            # In V1 this might be missing if main.py doesn't run the exact Core V1 Engine yet.
+            # Let's check for V1 existence in the output dir first, or attempt to run it.
+            core_regime_path = f"out/core_regime_state_{ts_str}.json"
+            if os.path.exists(core_regime_path):
+                with open(core_regime_path, 'r') as f:
+                    core_regime = json.load(f)
+                    
+                assets_map = load_assets_mapping("config/assets.yml")
+                mp, unk, flags = map_snapshot_to_classes(snapshot, assets_map)
+                actuals = aggregate_actual_weights(mp, snapshot.get("cash_pct", 0.0))
+                targets = build_target_weights(core_regime)
+                
+                gaps, qual, posture, recs = compute_alignment(
+                    targets, actuals, unk,
+                    core_regime.get("regime_base", "Transition"),
+                    core_regime.get("regime_overlay", "None"),
+                    core_regime.get("confidence", 50)
+                )
+                trades = build_ticker_trades(mp, gaps, qual)
+                
+                qual_dict = {
+                    "mapping_coverage_pct": round(100.0 - unk, 2),
+                    "unknown_weight_pct": round(unk, 2),
+                    "quality_label": qual,
+                    "flags": flags
+                }
+                
+                all_weather_alignment = build_alignment_artifact(
+                    ts_iso, ts_iso, core_regime.get("timestamp_utc", ts_iso), ts_iso,
+                    core_regime, qual_dict, targets, actuals, gaps, posture, recs, trades
+                )
+                
+                out_path_aw = f"out/all_weather_alignment_{ts_str}.json"
+                with open(out_path_aw, "w") as f:
+                    json.dump(all_weather_alignment, f, indent=2)
+                logger.info(f"All-Weather Alignment saved to {out_path_aw}")
+            else:
+                logger.info("Skipping All-Weather Alignment (Core Regime state not found for pipeline).")
+        except Exception as awe:
+            logger.warning(f"All-Weather Alignment step failed or missing dependencies: {awe}")
+            
+        report_path = generate_markdown_report(ts_str, summary, alerts, market_state, portfolio_state, all_weather_alignment)
         optional_google_drive_upload(zip_path)
         
         # Step 6: Webhook Broadcasting (V6)

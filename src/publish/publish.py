@@ -11,7 +11,14 @@ def zip_run_bundle(bundle_dir: str) -> str:
     archive_path = shutil.make_archive(output_filename, 'zip', bundle_dir)
     return archive_path
 
-def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[str, Any], market_state: Dict[str, Any], portfolio_state: Dict[str, Any]) -> str:
+def generate_markdown_report(
+    ts_str: str, 
+    summary: Dict[str, Any], 
+    alerts: Dict[str, Any], 
+    market_state: Dict[str, Any], 
+    portfolio_state: Dict[str, Any],
+    all_weather_alignment: Dict[str, Any] = None
+) -> str:
     """Generates the Macro Posture Brief (BETA) report."""
     report_path = os.path.join(os.path.dirname(__file__), "..", "..", "out", f"report_{ts_str}.md")
     
@@ -68,8 +75,41 @@ def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[
     posture = "NEUTRAL"
     confidence = "Medium"
     rationale_why = "Balancing mixed signals in the macro regime."
+    action_bullets = ""
+    alignment_section = ""
 
-    if v5_usable:
+    if all_weather_alignment:
+        post = all_weather_alignment.get("posture", {})
+        posture = post.get("posture", "NEUTRAL")
+        confidence = post.get("confidence_label", "MEDIUM").capitalize()
+        
+        briefs = all_weather_alignment.get("brief_bullets", [])
+        if briefs:
+            rationale_why = briefs[0].strip("- ")
+        
+        # We replace action bullets directly with the output from alignment engine
+        recs = all_weather_alignment.get("recommended_actions", {})
+        action_list = []
+        for a in recs.get("top_3_actions", []):
+            if a["action"] != "HOLD":
+                action_list.append(f"- {a['action']} {a['asset']} ({a['why']})")
+        if not action_list:
+            action_list.append("- HOLD current core allocations.")
+            
+        for n in recs.get("notes", []):
+            action_list.append(f"- Note: {n}")
+            
+        action_bullets = "\n".join(action_list)
+        
+        # Build alignment section text from brief bullets (skipping the first which is posture)
+        other_briefs = briefs[1:] if len(briefs) > 1 else []
+        alignment_bullets = "\n".join([f"- {b}" for b in other_briefs])
+        
+        alignment_section = f"""## 0. All-Weather Alignment
+{alignment_bullets}
+"""
+    elif v5_usable:
+        # Fallback to V5 directly
         tl = str(macro.get('traffic_light', 'ORANGE')).upper()
         p_comp = float(macro.get('p_drawdown_composite', 0.1))
         
@@ -100,26 +140,27 @@ def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[
             rationale_why = "Heuristic indicators scattered around historical averages."
             confidence = "Medium" if not key_data_missing else "Low"
             
-    # Sub-score RED cap constraint
-    usd_color = sub_scores.get('usd_stress', {}).get('color', 'green').lower()
-    com_color = sub_scores.get('commodities_stress', {}).get('color', 'green').lower()
-    hard_red = (usd_color == 'red' or com_color == 'red')
-    
-    if hard_red and ms_score < 70 and posture == "RISK-ON":
-        posture = "NEUTRAL"
-        rationale_why += " (Capped at NEUTRAL: Severe USD or Commodities stress triggered hard bounds)."
+    if not all_weather_alignment:
+        # Sub-score RED cap constraint
+        usd_color = sub_scores.get('usd_stress', {}).get('color', 'green').lower()
+        com_color = sub_scores.get('commodities_stress', {}).get('color', 'green').lower()
+        hard_red = (usd_color == 'red' or com_color == 'red')
         
-    if key_data_missing and confidence == "High":
-        confidence = "Medium"
+        if hard_red and ms_score < 70 and posture == "RISK-ON":
+            posture = "NEUTRAL"
+            rationale_why += " (Capped at NEUTRAL: Severe USD or Commodities stress triggered hard bounds)."
+            
+        if key_data_missing and confidence == "High":
+            confidence = "Medium"
 
-    # Action Sets
-    action_bullets = ""
-    if posture == "RISK-ON":
-        action_bullets = "- Increase beta gradually\n- Prefer quality growth\n- Avoid hedges"
-    elif posture == "NEUTRAL":
-        action_bullets = "- Maintain core\n- Add selectively on dips\n- Keep dry powder"
-    else:
-        action_bullets = "- Reduce beta\n- Raise cash / defensives\n- Hedge tail risk"
+    # Action Sets (if not overridden by alignment engine)
+    if not action_bullets:
+        if posture == "RISK-ON":
+            action_bullets = "- Increase beta gradually\n- Prefer quality growth\n- Avoid hedges"
+        elif posture == "NEUTRAL":
+            action_bullets = "- Maintain core\n- Add selectively on dips\n- Keep dry powder"
+        else:
+            action_bullets = "- Reduce beta\n- Raise cash / defensives\n- Hedge tail risk"
 
     # --- RATIONALE (5-7 SIGNALS) ---
     vix = inds.get("volatility", {}).get("vix_level")
@@ -207,7 +248,7 @@ def generate_markdown_report(ts_str: str, summary: Dict[str, Any], alerts: Dict[
 *Data Freshness (As-of Date): {asof_date}*
 *Wiring Status: V5 Present={'Yes' if v5_present else 'No'}, Usable={'Yes' if v5_usable else 'No'}, Missing Meta={missing_meta_count}*
 
-## 1. Decision Focus
+{alignment_section}## 1. Decision Focus
 - **Posture**: **{posture}**
 - **Confidence**: {confidence}
 - **Why now**: {rationale_why}
