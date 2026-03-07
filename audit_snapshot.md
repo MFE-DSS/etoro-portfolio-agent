@@ -3,7 +3,7 @@
 
 ## 1. Project Overview & Architecture
 The project is a production-grade, repo-based portfolio agent for eToro that fetches portfolio data, normalizes it, and applies multiple layers of quantitative and qualitative analysis.
-# 
+
 **Core Layers**:
 - **Data Collection & Normalization (`src/collectors/`, `src/normalize.py`)**: Fetches from eToro and FRED, normalizes outputs against strict JSON schemas.
 - **V3: Portfolio Overlay Layer (`src/portfolio/`)**: Deterministic layer calculating metric exposures, concentration, and macro fit scores.
