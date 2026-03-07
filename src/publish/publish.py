@@ -238,13 +238,64 @@ def generate_markdown_report(
     else:
         triggers = "- (To NEUTRAL): VIX retreats below 20 for one full week.\n- (To NEUTRAL): Credit spreads (HY) tighten back below 5.0.\n- (To RISK-ON): NDX recovers and holds above MA200."
 
-    # Cash / Budget
+    # --- ASSEMBLE PORTFOLIO SNAPSHOT ---
     port_sum = portfolio_state.get('portfolio_summary', {})
     cash_val = port_sum.get('cash_pct', portfolio_state.get('cash_pct', 0.0))
-    dry_powder = "High" if cash_val > 0.25 else ("Medium" if cash_val > 0.10 else "Low")
+    dry_powder_label = "High" if cash_val > 0.25 else ("Medium" if cash_val > 0.10 else "Low")
+    
+    positions = portfolio_state.get('positions', [])
+    total_positions = port_sum.get('total_positions', len(positions))
+    hhi = port_sum.get('hhi', 0.0)
+    top_1_pct = port_sum.get('top_1_pct', 0.0)
+    top_4_pct = port_sum.get('top_4_pct', 0.0)
+    
+    # Sort top 5 positions
+    sorted_pos = sorted(positions, key=lambda x: x.get('weight_pct', 0.0), reverse=True)
+    top_5 = sorted_pos[:5]
+    
+    top_5_list = "\n".join([f"- **{p.get('ticker', 'UNK')}**: {fmt_pct(p.get('weight_pct', 0.0))} (Fit: {p.get('color', 'unknown').upper()})" for p in top_5])
+    if not top_5_list:
+        top_5_list = "- No positions found."
+        
+    exposures = portfolio_state.get('exposures', {})
+    by_sector = exposures.get('by_sector', {})
+    by_asset = exposures.get('by_asset_type', {})
+    
+    # Sort exposures
+    top_sectors = sorted(by_sector.items(), key=lambda x: x[1], reverse=True)[:3]
+    sec_str = " | ".join([f"{k}: {fmt_pct(v)}" for k, v in top_sectors]) if top_sectors else "None"
+    
+    top_assets = sorted(by_asset.items(), key=lambda x: x[1], reverse=True)[:3]
+    asset_str = " | ".join([f"{k}: {fmt_pct(v)}" for k, v in top_assets]) if top_assets else "None"
+    
+    # Warnings logic
+    warnings = []
+    if hhi > 0.15:
+        warnings.append("⚠️ **High Concentration**: Portfolio HHI indicates significant stock-specific risk.")
+    if top_1_pct > 0.20:
+        warnings.append(f"⚠️ **Single Asset Risk**: Top position is {fmt_pct(top_1_pct)} of portfolio.")
+    if 'Defensive Equities' not in by_asset and 'Gold' not in by_asset and 'Duration (Bonds)' not in by_asset:
+        warnings.append("⚠️ **Missing Ballast**: No explicit safe-haven or defensive anchors detected.")
+    if not warnings:
+        warnings.append("- Portfolio structure appears reasonably balanced without critical structural warnings.")
+    
+    warnings_list = "\n".join(warnings)
+
+    portfolio_section = f"""## 2. Portfolio Snapshot & Diagnostics
+- **Total Positions**: {total_positions}
+- **Cash & Equivalents**: {fmt_pct(cash_val)} ({dry_powder_label} dry powder)
+- **Top Sectors**: {sec_str}
+- **Top Asset Classes**: {asset_str}
+
+**Top 5 Holdings:**
+{top_5_list}
+
+**Concentration Warnings / Missing Sleeves:**
+{warnings_list}
+"""
 
     # --- ASSEMBLE MD ---
-    md_content = f"""# Macro Posture Brief (BETA) — {ts_str}
+    md_content = f"""# Macro Posture Brief & Portfolio Analysis — {ts_str}
 *Data Freshness (As-of Date): {asof_date}*
 *Wiring Status: V5 Present={'Yes' if v5_present else 'No'}, Usable={'Yes' if v5_usable else 'No'}, Missing Meta={missing_meta_count}*
 
@@ -252,22 +303,20 @@ def generate_markdown_report(
 - **Posture**: **{posture}**
 - **Confidence**: {confidence}
 - **Why now**: {rationale_why}
-- **Risk Budget**: Dry powder is {dry_powder} ({fmt_pct(cash_val)})
+- **Risk Budget**: Dry powder is {dry_powder_label} ({fmt_pct(cash_val)})
 
 **Recommended Action Set:**
 {action_bullets}
 
-## 2. Rationale (Market Pricing)
+{portfolio_section}
+## 3. Rationale (Market Pricing)
 {rationale_section}
 
-## 3. Regime Risks
+## 4. Regime Risks
 {regime_risks}
 
-## 4. What would change my mind?
+## 5. What would change my mind?
 {triggers}
-
----
-*This report is macro-only BETA; portfolio diagnostics removed by design.*
 """
     
     with open(report_path, "w") as f:

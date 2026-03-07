@@ -72,12 +72,12 @@ def test_generate_markdown_report_formatting(tmp_path):
         assert "Wiring Status: V5 Present=Yes, Usable=No" in content
         
         # 3) Check Rationale Section
-        assert "2. Rationale (Market Pricing)" in content
+        assert "3. Rationale (Market Pricing)" in content
         assert "**VIX**: 20.00 vs <20 calm, >25 stress" in content
         
         # 4) Check Sections exist
-        assert "3. Regime Risks" in content
-        assert "4. What would change my mind?" in content
+        assert "4. Regime Risks" in content
+        assert "5. What would change my mind?" in content
         
         # Test a healthy V5 scenario
         portfolio_state["risk_overlay"]["macro_regime"]["p_drawdown_20"] = 0.1
