@@ -211,10 +211,11 @@ def _section_alignment(
     all_weather_alignment: Optional[Dict],
     market_state: Dict,
 ) -> str:
-    if not interpretation and not all_weather_alignment:
-        return ""
-
     lines = ["## 4. Regime Alignment Assessment\n"]
+
+    if not interpretation and not all_weather_alignment:
+        lines.append("_No alignment data available for this run._\n")
+        return "\n".join(lines) + "\n"
 
     regime_color = market_state.get("color", "orange")
     regime_word = {"green": "Risk-On", "orange": "Transitional", "red": "Risk-Off"}.get(
@@ -259,6 +260,12 @@ def _section_alignment(
     if all_weather_alignment:
         aw_posture = all_weather_alignment.get("posture", {})
         aw_gaps = all_weather_alignment.get("gaps_total_pct", [])
+        briefs = all_weather_alignment.get("brief_bullets", [])
+        if briefs:
+            lines.append("### All-Weather Assessment")
+            for b in briefs:
+                lines.append(f"- {b}")
+            lines.append("")
         lines.append("### All-Weather Allocation Gaps")
         if aw_gaps:
             gap_rows = ["| Asset Class | Gap | Action |",
