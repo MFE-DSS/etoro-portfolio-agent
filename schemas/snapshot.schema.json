@@ -16,6 +16,10 @@
       "minimum": 0,
       "maximum": 1
     },
+    "total_value_usd": {
+      "type": "number",
+      "description": "Total portfolio value in USD (invested equity + cash). Optional — present when eToro API provides absolute amounts."
+    },
     "positions": {
       "type": "array",
       "items": {
@@ -46,6 +50,14 @@
           },
           "pnl_pct": {
             "type": "number"
+          },
+          "market_value_usd": {
+            "type": "number",
+            "description": "Current market value of this position in USD. Optional — present when eToro API provides absolute amounts."
+          },
+          "units": {
+            "type": "number",
+            "description": "Number of units/shares held. Optional — present when available from API."
           }
         },
         "required": [

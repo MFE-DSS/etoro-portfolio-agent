@@ -87,6 +87,7 @@ def _section_executive_summary(
     health_color: str,
     regime_label: str,
     interpretation: Optional[Dict],
+    snapshot: Optional[Dict] = None,
 ) -> str:
     port_posture = ""
     if interpretation:
@@ -94,6 +95,13 @@ def _section_executive_summary(
         port_posture = f" | Portfolio: **{pl.replace('_', ' ')}**"
 
     health_icon = {"green": "🟢", "orange": "🟡", "red": "🔴"}.get(health_color, "⚪")
+
+    # Total portfolio value row (only when absolute amounts are available)
+    total_val_row = ""
+    if snapshot:
+        tv = snapshot.get("total_value_usd")
+        if tv is not None:
+            total_val_row = f"\n| Portfolio value | **${tv:,.0f}** |"
 
     return f"""\
 ## 1. Executive Summary
@@ -103,9 +111,35 @@ def _section_executive_summary(
 | Run date | {asof_date} |
 | Macro posture | **{posture}** ({confidence} confidence) |
 | Regime | {regime_label} |
-| Health score | {health_icon} **{health_score}/100** ({health_color.upper()}){port_posture} |
+| Health score | {health_icon} **{health_score}/100** ({health_color.upper()}){port_posture} |{total_val_row}
 
 """
+
+
+def _build_sub_scores_table(sub_scores: Dict) -> str:
+    """Render the 7 regime sub-scores as a compact markdown table."""
+    if not sub_scores:
+        return ""
+    label_map = {
+        "growth": "Growth",
+        "inflation": "Inflation",
+        "rates": "Rates",
+        "credit": "Credit",
+        "volatility": "Volatility",
+        "usd_stress": "USD Stress",
+        "commodities_stress": "Commodities",
+    }
+    color_icon = {"green": "🟢", "orange": "🟡", "red": "🔴"}
+    rows = ["| Dimension | Score | Signal |", "|-----------|-------|--------|"]
+    for key, label in label_map.items():
+        entry = sub_scores.get(key, {})
+        score = entry.get("score")
+        col = entry.get("color", "orange").lower()
+        if score is None:
+            continue
+        icon = color_icon.get(col, "⚪")
+        rows.append(f"| {label} | {score}/100 | {icon} |")
+    return "\n".join(rows) if len(rows) > 2 else ""
 
 
 def _section_macro_regime(
@@ -122,11 +156,14 @@ def _section_macro_regime(
 
     regime_block = alignment_section if alignment_section else ""
 
+    sub_scores_table = _build_sub_scores_table(market_state.get("sub_scores", {}))
+    sub_scores_section = f"\n### Regime Sub-Scores\n{sub_scores_table}\n" if sub_scores_table else ""
+
     return f"""\
 ## 2. Current Macro Regime
 
 **Risk Score**: {risk_score}/100 `{bar}` ({color})
-{regime_block}
+{regime_block}{sub_scores_section}
 ### Key Signals
 {rationale_section}
 
@@ -157,17 +194,32 @@ def _section_portfolio_snapshot(interpretation: Optional[Dict], snapshot: Dict) 
     conc_warn = conc.get("warning", "OK")
     conc_icon = {"OK": "✅", "MODERATE": "⚠️", "HIGH": "🔴"}.get(conc_warn, "")
 
-    # Top 5 table
+    # Build lookup: ticker → snapshot position for $ values
+    snap_lookup = {p.get("ticker", ""): p for p in snapshot.get("positions", [])}
+    has_mktval = any("market_value_usd" in p for p in snapshot.get("positions", []))
+
+    # Top 5 table — include Market Value column only when absolute amounts are available
     top5 = interpretation.get("top5_by_weight", [])
     if top5:
-        rows = ["| Ticker | Weight | Sector | Asset Type | P&L | Fit |",
-                "|--------|--------|--------|------------|-----|-----|"]
+        if has_mktval:
+            rows = ["| Ticker | Weight | Mkt Value | Sector | P&L | Fit |",
+                    "|--------|--------|-----------|--------|-----|-----|"]
+        else:
+            rows = ["| Ticker | Weight | Sector | Asset Type | P&L | Fit |",
+                    "|--------|--------|--------|------------|-----|-----|"]
         for p in top5:
             pnl_str = f"{p['pnl_pct']:+.1f}%" if p.get("pnl_pct") is not None else "n/a"
             fit_icon = {"green": "✅", "orange": "🟡", "red": "🔴"}.get(p.get("macro_fit", ""), "⚪")
-            rows.append(
-                f"| {p['ticker']} | {p['weight_pct']:.1f}% | {p['sector']} | {p['asset_type']} | {pnl_str} | {fit_icon} |"
-            )
+            if has_mktval:
+                mv = snap_lookup.get(p["ticker"], {}).get("market_value_usd")
+                mv_str = f"${mv:,.0f}" if mv is not None else "n/a"
+                rows.append(
+                    f"| {p['ticker']} | {p['weight_pct']:.1f}% | {mv_str} | {p['sector']} | {pnl_str} | {fit_icon} |"
+                )
+            else:
+                rows.append(
+                    f"| {p['ticker']} | {p['weight_pct']:.1f}% | {p['sector']} | {p['asset_type']} | {pnl_str} | {fit_icon} |"
+                )
         top5_table = "\n".join(rows)
     else:
         top5_table = "_No positions available._"
@@ -213,14 +265,17 @@ def _section_alignment(
 ) -> str:
     lines = ["## 4. Regime Alignment Assessment\n"]
 
-    if not interpretation and not all_weather_alignment:
-        lines.append("_No alignment data available for this run._\n")
-        return "\n".join(lines) + "\n"
-
     regime_color = market_state.get("color", "orange")
     regime_word = {"green": "Risk-On", "orange": "Transitional", "red": "Risk-Off"}.get(
         regime_color, "Mixed"
     )
+
+    if not interpretation and not all_weather_alignment:
+        lines.append(
+            f"_Regime context: **{regime_word}**. "
+            "No portfolio interpretation or All-Weather alignment available for this run._\n"
+        )
+        return "\n".join(lines) + "\n"
 
     if interpretation:
         posture_label = interpretation.get("posture_label", "UNKNOWN")
@@ -258,23 +313,26 @@ def _section_alignment(
 
     # All-Weather alignment overlay (if available from V1 engine)
     if all_weather_alignment:
-        aw_posture = all_weather_alignment.get("posture", {})
         aw_gaps = all_weather_alignment.get("gaps_total_pct", [])
-        briefs = all_weather_alignment.get("brief_bullets", [])
-        if briefs:
-            lines.append("### All-Weather Assessment")
-            for b in briefs:
-                lines.append(f"- {b}")
-            lines.append("")
-        lines.append("### All-Weather Allocation Gaps")
+        aw_targets = {t["asset"]: t["target"] for t in all_weather_alignment.get("target_weights_total_pct", [])}
+        aw_actuals = {a["asset"]: a["actual"] for a in all_weather_alignment.get("actual_weights_total_pct", [])}
+        aq = all_weather_alignment.get("alignment_quality", {})
+        cov_pct = aq.get("mapping_coverage_pct")
+        cov_note = f" _(mapping coverage {cov_pct:.0f}%)_" if cov_pct is not None else ""
+        lines.append(f"### All-Weather Allocation: Target vs Actual{cov_note}")
         if aw_gaps:
-            gap_rows = ["| Asset Class | Gap | Action |",
-                        "|-------------|-----|--------|"]
+            gap_rows = ["| Asset Class | Target | Actual | Gap | Action |",
+                        "|-------------|--------|--------|-----|--------|"]
             for g in sorted(aw_gaps, key=lambda x: abs(x.get("gap", 0)), reverse=True)[:6]:
+                asset = g["asset"]
                 action = g.get("action", "HOLD")
                 icon = {"TRIM": "⬇️", "ADD": "⬆️", "HOLD": "➡️"}.get(action, "")
+                tgt = aw_targets.get(asset)
+                act = aw_actuals.get(asset)
+                tgt_str = f"{tgt:.1f}%" if tgt is not None else "n/a"
+                act_str = f"{act:.1f}%" if act is not None else "n/a"
                 gap_rows.append(
-                    f"| {g['asset']} | {g['gap']:+.1f}% | {icon} {action} |"
+                    f"| {asset} | {tgt_str} | {act_str} | {g['gap']:+.1f}% | {icon} {action} |"
                 )
             lines.append("\n".join(gap_rows))
         lines.append("")
@@ -520,10 +578,11 @@ def generate_markdown_report(
     triggers = _build_triggers(posture)
 
     # ---- All-Weather alignment section (brief bullets) ----------------------
+    # Include ALL brief bullets (index 0 contains the posture rationale)
     alignment_section = ""
     if all_weather_alignment:
         briefs = all_weather_alignment.get("brief_bullets", [])
-        other_briefs = briefs[1:] if len(briefs) > 1 else []
+        other_briefs = briefs  # show all bullets; briefs[0] is the posture context
         if other_briefs:
             alignment_section = "\n".join(f"- {b}" for b in other_briefs) + "\n"
 
@@ -539,7 +598,7 @@ def generate_markdown_report(
     # ---- Build all sections ------------------------------------------------
     s1 = _section_executive_summary(
         ts_str, asof_date, posture, confidence, health_score, health_color,
-        regime_label, portfolio_interpretation
+        regime_label, portfolio_interpretation, snapshot
     )
     s2 = _section_macro_regime(
         market_state, posture, rationale_section, regime_risks,
