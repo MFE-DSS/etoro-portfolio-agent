@@ -1,8 +1,19 @@
+import sys
+import types
 import pytest
 from unittest.mock import patch, MagicMock
 from src.decision_engine.engine import generate_decisions, build_fallback_decisions, strip_invalid_tickers
 import json
 import os
+
+
+def _make_genai_mock(mock_client):
+    """Inject a fake google.genai module into sys.modules so lazy imports work."""
+    mock_genai = types.ModuleType("google.genai")
+    mock_genai.Client = MagicMock(return_value=mock_client)
+    mock_google = sys.modules.get("google", types.ModuleType("google"))
+    mock_google.genai = mock_genai
+    return {"google": mock_google, "google.genai": mock_genai}
 
 @pytest.fixture
 def mock_inputs():
@@ -46,18 +57,17 @@ def test_strip_invalid_tickers():
     assert len(cleaned["dca_plan_2m"][0]["targets"]) == 1
     assert cleaned["dca_plan_2m"][0]["targets"][0]["ticker"] == "AAPL"
 
-@patch('src.decision_engine.engine.genai.Client')
-def test_generate_decisions_valid_json(mock_client_class, mock_inputs, monkeypatch):
+def test_generate_decisions_valid_json(mock_inputs, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake_key")
     snapshot, market_state, portfolio_state = mock_inputs
     valid_tickers = ["AAPL"]
-    
+
     # Mock LLM returning valid JSON
     mock_client = MagicMock()
     mock_chats = MagicMock()
     mock_chat = MagicMock()
     mock_response = MagicMock()
-    
+
     valid_json_str = json.dumps({
         "timestamp": "2026-03-03T10:00:00Z",
         "regime_summary": {
@@ -86,37 +96,39 @@ def test_generate_decisions_valid_json(mock_client_class, mock_inputs, monkeypat
         ],
         "alerts": []
     })
-    
+
     mock_response.text = f"```json\n{valid_json_str}\n```"
     mock_chat.send_message.return_value = mock_response
     mock_chats.create.return_value = mock_chat
     mock_client.chats = mock_chats
-    mock_client_class.return_value = mock_client
-    
-    decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
+
+    # Inject google.genai mock via sys.modules so the lazy import resolves correctly
+    with patch.dict("sys.modules", _make_genai_mock(mock_client)):
+        decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
+
     assert decisions["regime_summary"]["color"] == "green"
     assert len(decisions["actions"]) == 1
 
-@patch('src.decision_engine.engine.genai.Client')
-def test_generate_decisions_trigger_fallback_on_garbage(mock_client_class, mock_inputs, monkeypatch):
+
+def test_generate_decisions_trigger_fallback_on_garbage(mock_inputs, monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "fake_key")
     snapshot, market_state, portfolio_state = mock_inputs
     valid_tickers = ["AAPL"]
-    
+
     mock_client = MagicMock()
     mock_chats = MagicMock()
     mock_chat = MagicMock()
     mock_response = MagicMock()
-    
+
     # Mock LLM returning garbage text both times
     mock_response.text = "This is not json."
     mock_chat.send_message.return_value = mock_response
     mock_chats.create.return_value = mock_chat
     mock_client.chats = mock_chats
-    mock_client_class.return_value = mock_client
-    
-    decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
-    
+
+    with patch.dict("sys.modules", _make_genai_mock(mock_client)):
+        decisions = generate_decisions(snapshot, market_state, portfolio_state, valid_tickers)
+
     # Should engage fallback
     assert len(decisions["alerts"]) > 0
     assert decisions["alerts"][0]["name"] == "Engine Fallback"

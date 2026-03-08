@@ -300,6 +300,83 @@ class TestReportGeneration:
         assert "Recession" in content
         assert "Liquidity Stress" in content
 
+    def test_report_shows_total_value_when_present(
+        self, minimal_market_state, minimal_portfolio_state,
+        minimal_summary, minimal_alerts, minimal_interpretation
+    ):
+        """total_value_usd in snapshot should appear in the executive summary."""
+        from src.publish.publish import generate_markdown_report
+        snapshot_with_value = {
+            "date": "2026-03-01T10:00:00Z",
+            "currency": "USD",
+            "cash_pct": 0.15,
+            "total_value_usd": 125000.0,
+            "positions": [
+                {"ticker": "AAPL", "asset_type": "Equity", "region": "US",
+                 "sector": "Technology", "weight_pct": 0.20, "market_value_usd": 25000.0},
+            ],
+        }
+        path = generate_markdown_report(
+            ts_str="20260301T100007",
+            summary=minimal_summary,
+            alerts=minimal_alerts,
+            market_state=minimal_market_state,
+            portfolio_state=minimal_portfolio_state,
+            portfolio_interpretation=minimal_interpretation,
+            snapshot=snapshot_with_value,
+        )
+        with open(path) as f:
+            content = f.read()
+        assert "125,000" in content, "Total portfolio value should appear in report"
+
+    def test_report_sub_scores_table_present(
+        self, minimal_portfolio_state, minimal_summary, minimal_alerts, minimal_snapshot
+    ):
+        """Report should include sub-scores table when sub_scores are present."""
+        from src.publish.publish import generate_markdown_report
+        ms_with_subscores = {
+            "risk_score": 60,
+            "color": "orange",
+            "timestamp": "2026-03-01T10:00:00Z",
+            "sub_scores": {
+                "growth": {"score": 55, "color": "orange"},
+                "inflation": {"score": 65, "color": "green"},
+                "rates": {"score": 40, "color": "red"},
+                "credit": {"score": 70, "color": "green"},
+                "volatility": {"score": 75, "color": "green"},
+                "usd_stress": {"score": 50, "color": "orange"},
+                "commodities_stress": {"score": 50, "color": "orange"},
+            },
+            "regime_probabilities": {
+                "recession_risk": 0.2,
+                "liquidity_stress_risk": 0.1,
+                "inflation_resurgence_risk": 0.2,
+                "policy_shock_risk": 0.1,
+            },
+            "indicators": {
+                "volatility": {"vix_level": 18},
+                "trend": {"ndx": {"price": 19000, "ma200": 17000}},
+                "credit": {"hy_spread_level": 3.5},
+                "rates": {"yield_curve_10y_2y": 0.3},
+                "usd_gold": {"dxy_above_ma50": False},
+                "inflation": {"cpi_headline_yoy": 2.5},
+                "growth": {"pmi_level": 52},
+            },
+        }
+        path = generate_markdown_report(
+            ts_str="20260301T100008",
+            summary=minimal_summary,
+            alerts=minimal_alerts,
+            market_state=ms_with_subscores,
+            portfolio_state=minimal_portfolio_state,
+            snapshot=minimal_snapshot,
+        )
+        with open(path) as f:
+            content = f.read()
+        assert "Regime Sub-Scores" in content
+        assert "Growth" in content
+        assert "Inflation" in content
+
     def test_report_with_active_alerts(
         self, minimal_market_state, minimal_portfolio_state,
         minimal_summary, minimal_snapshot, minimal_interpretation

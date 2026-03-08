@@ -354,7 +354,22 @@ def main():
         # ------------------------------------------------------------------ #
         logger.info("=== STEP 6: Webhook Broadcasting (V6) ===")
         from src.publish.notifier import send_webhook_notification
-        send_webhook_notification(report_path, ts_str)
+
+        # Build an informative email subject: regime + health score + date
+        _regime_color = market_state.get("color", "orange").upper()
+        _health_score = summary.get("health_score", "?")
+        _health_color = summary.get("health_color", "").upper()
+        _aw_regime_base = (
+            all_weather_alignment.get("macro_regime", {}).get("regime_base", "")
+            if all_weather_alignment else ""
+        )
+        _regime_label = _aw_regime_base or _regime_color
+        _subject_hint = (
+            f"Portfolio Brief — {_regime_label} | "
+            f"Health {_health_score}/100 ({_health_color}) | "
+            f"{ts_iso[:10]}"
+        )
+        send_webhook_notification(report_path, ts_str, subject_hint=_subject_hint)
 
         logger.info("Pipeline completed successfully.")
 

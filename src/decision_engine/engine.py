@@ -4,7 +4,10 @@ import logging
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 from jsonschema import validate, ValidationError
-from google import genai
+
+# google-genai is imported lazily inside generate_decisions() so the rest of
+# the module (fallback helpers, strip_invalid_tickers) remains importable
+# without a GEMINI_API_KEY or the google-genai package being installed.
 
 from src.decision_engine.prompts import SYSTEM_PROMPT, build_user_prompt, REPAIR_PROMPT
 
@@ -105,7 +108,13 @@ def generate_decisions(snapshot: Dict[str, Any], market_state: Dict[str, Any], p
     if not api_key:
         logger.error("GEMINI_API_KEY not found. Triggering fallback.")
         return build_fallback_decisions(snapshot, market_state, portfolio_state, "API Key missing.")
-        
+
+    try:
+        from google import genai  # lazy import — avoids hard dependency at import time
+    except ImportError:
+        logger.error("google-genai package not installed. Triggering fallback.")
+        return build_fallback_decisions(snapshot, market_state, portfolio_state, "google-genai not installed.")
+
     client = genai.Client(api_key=api_key)
     
     # Load schema for validation

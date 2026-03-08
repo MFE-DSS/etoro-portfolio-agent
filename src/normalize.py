@@ -160,6 +160,7 @@ def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
                 "open_rate": pos.get("openRate") or pos.get("open_rate"),
                 "current_rate": pos.get("currentRate") or pos.get("current_rate"),
                 "profit": 0.0,
+                "units": None,
             }
 
         grouped[ticker]["amount"] += amount
@@ -172,6 +173,13 @@ def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
             grouped[ticker]["open_rate"] = pos.get("openRate") or pos.get("open_rate")
         if grouped[ticker]["current_rate"] is None:
             grouped[ticker]["current_rate"] = pos.get("currentRate") or pos.get("current_rate")
+        # Accumulate units when available
+        raw_units = pos.get("units") or pos.get("Units")
+        if raw_units is not None:
+            try:
+                grouped[ticker]["units"] = (grouped[ticker]["units"] or 0.0) + float(raw_units)
+            except (TypeError, ValueError):
+                pass
 
     total_invested = sum(g["amount"] for g in grouped.values())
     total_equity = credit + total_invested
@@ -205,6 +213,11 @@ def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
                 pos_dict["price"] = float(agg["current_rate"])
             if pnl_pct is not None:
                 pos_dict["pnl_pct"] = round(pnl_pct, 4)
+            # Absolute dollar value of this position (amount = current market value in eToro)
+            if agg["amount"] > 0:
+                pos_dict["market_value_usd"] = round(agg["amount"], 2)
+            if agg.get("units") is not None:
+                pos_dict["units"] = round(agg["units"], 6)
 
             if meta.get("asset_type") is None or meta.get("sector") is None:
                 logger.warning(
@@ -220,6 +233,9 @@ def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
         "cash_pct": round(cash_pct, 4),
         "positions": normalized_positions,
     }
+    # Total portfolio value in USD (invested + cash) — present when eToro provides amounts
+    if total_equity > 0:
+        snapshot["total_value_usd"] = round(total_equity, 2)
 
     schema = load_schema()
     try:
