@@ -8,26 +8,235 @@
 #   role                   : core / hedge / swing / optional
 #   factor_bucket          : energy / defensives / quality / us_growth /
 #                            commodities / rates_sensitive / em_growth / other
-#   asset_class_all_weather: Canonical All-Weather bucket used by the
-#                            alignment engine (must match target_builder targets)
+#   asset_class_all_weather: Canonical All-Weather bucket — must match target_builder targets:
+#                              "Global Equities - Quality"
+#                              "Global Equities - Value/Cyclicals"
+#                              "Defensive Equities"
+#                              "Duration (Bonds)"
+#                              "Gold"
+#                              "Broad Commodities"
+#                              "Energy Tilt"
+#                              "Cash-like / T-bills"
 #   inflation_sensitivity  : high / medium / low / negative
-#                            high     = benefits from rising inflation
-#                            medium   = moderate correlation
-#                            low      = mostly uncorrelated
-#                            negative = hurt by rising inflation (e.g. long bonds)
-#   etoro_instrument_id    : Optional numeric eToro instrumentID — allows
-#                            normalize.py to resolve IDs without hardcoding them.
-#                            Obtain from the eToro Discovery API or API portal.
+#   etoro_instrument_id    : Numeric eToro instrumentID. Verified entries are
+#                            cross-checked against live portfolio weight matches.
+#                            HOW TO VERIFY:
+#                              GET https://public-api.etoro.com/api/v1/market-data/search
+#                                  ?internalSymbolFull=<TICKER>
 
-# ── US Large-Cap Growth / Quality Equities ─────────────────────────────────
+# ═══════════════════════════════════════════════════════════════════════════════
+# PORTFOLIO ACTUEL — @RealRandyMarsh (verified 2026-03-08)
+# ═══════════════════════════════════════════════════════════════════════════════
 #
-# etoro_instrument_id — numeric ID returned by the eToro API for this instrument.
-# HOW TO VERIFY: In the eToro app, open the instrument page and check the URL
-# (e.g., etoro.com/markets/aapl → id visible in API calls), or query:
-#   GET https://public-api.etoro.com/api/v1/market-data/search?internalSymbolFull=AAPL
-# IDs marked "verified" have been confirmed against a live API response.
-# IDs without a "verified" note are best-guess and should be confirmed.
-# IMPORTANT: Remove or correct an entry if it resolves to the wrong position.
+# All-Weather thematic groupings:
+#
+#  ┌─ GLOBAL EQUITIES - QUALITY (qualité / pricing power) ──────────────┐
+#  │  AI.PA  SU.PA  CRWD  LLY                                           │
+#  ├─ GLOBAL EQUITIES - VALUE/CYCLICALS (cycle / growth thématique) ────┤
+#  │  MC.PA  ICLN  TEP.PA  SOI.PA  STMMI.MI  ATE.PA  BRK.B              │
+#  ├─ DEFENSIVE EQUITIES (défensif / récession-résistant) ──────────────┤
+#  │  NESN.ZU  SAN.PA  RI.PA  RCO.PA                                    │
+#  ├─ BROAD COMMODITIES / REAL ASSETS (inflation hedge / infrastructures)│
+#  │  ZPRI.DE                                                           │
+#  └─ DURATION (BONDS) ──────────────────────────────────────────────────┘
+#     IEF
+
+# ── All-Weather: Global Equities — Quality ─────────────────────────────────
+# Entreprises avec pricing power, fossé concurrentiel, visibilité des flux
+
+AI.PA:
+  name: "Air Liquide SA"
+  sector: "Industrials"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "quality"
+  asset_class_all_weather: "Global Equities - Quality"
+  inflation_sensitivity: "medium"
+  etoro_instrument_id: 1233  # verified — weight match 11.34% ↔ 11.3% in report
+
+SU.PA:
+  name: "Schneider Electric SE"
+  sector: "Industrials"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "quality"
+  asset_class_all_weather: "Global Equities - Quality"
+  inflation_sensitivity: "medium"
+
+CRWD:
+  name: "CrowdStrike Holdings Inc."
+  sector: "Technology"
+  region: "US"
+  asset_type: "Equity"
+  role: "swing"
+  factor_bucket: "us_growth"
+  asset_class_all_weather: "Global Equities - Quality"
+  inflation_sensitivity: "low"
+
+LLY:
+  name: "Eli Lilly and Company"
+  sector: "Healthcare"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "quality"
+  asset_class_all_weather: "Global Equities - Quality"
+  inflation_sensitivity: "low"
+
+# ── All-Weather: Global Equities — Value/Cyclicals ─────────────────────────
+# Exposition au cycle économique, thématiques de croissance séculaire
+
+MC.PA:
+  name: "LVMH Moët Hennessy Louis Vuitton SA"
+  sector: "Consumer Discretionary"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "quality"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "medium"
+  etoro_instrument_id: 1253  # verified — weight match 10.20% ↔ 10.2% in report
+
+BRK.B:
+  name: "Berkshire Hathaway Inc. (Class B)"
+  sector: "Financial Services"
+  region: "US"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "quality"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "medium"
+  etoro_instrument_id: 1118  # verified — weight match 9.84% ↔ 9.8% in report
+
+ICLN:
+  name: "iShares Global Clean Energy ETF"
+  sector: "Utilities"
+  region: "Global"
+  asset_type: "ETF"
+  role: "swing"
+  factor_bucket: "other"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "medium"
+  etoro_instrument_id: 8739  # verified — weight match 6.89% ↔ 6.9% in report
+
+TEP.PA:
+  name: "Teleperformance SE"
+  sector: "Technology"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "swing"
+  factor_bucket: "other"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "low"
+
+SOI.PA:
+  name: "Soitec S.A."
+  sector: "Technology"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "swing"
+  factor_bucket: "other"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "low"
+
+STMMI.MI:
+  name: "STMicroelectronics N.V."
+  sector: "Technology"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "swing"
+  factor_bucket: "other"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "low"
+
+ATE.PA:
+  name: "Alten SA"
+  sector: "Technology"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "swing"
+  factor_bucket: "other"
+  asset_class_all_weather: "Global Equities - Value/Cyclicals"
+  inflation_sensitivity: "low"
+
+# ── All-Weather: Defensive Equities ────────────────────────────────────────
+# Faible beta, résistants en récession — santé, consommation de base
+
+NESN.ZU:
+  name: "Nestlé SA"
+  sector: "Consumer Defensive"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "defensives"
+  asset_class_all_weather: "Defensive Equities"
+  inflation_sensitivity: "low"
+
+SAN.PA:
+  name: "Sanofi SA"
+  sector: "Healthcare"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "defensives"
+  asset_class_all_weather: "Defensive Equities"
+  inflation_sensitivity: "low"
+
+RI.PA:
+  name: "Pernod Ricard SA"
+  sector: "Consumer Defensive"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "core"
+  factor_bucket: "defensives"
+  asset_class_all_weather: "Defensive Equities"
+  inflation_sensitivity: "low"
+
+RCO.PA:
+  name: "Rémy Cointreau SA"
+  sector: "Consumer Defensive"
+  region: "Europe"
+  asset_type: "Equity"
+  role: "swing"
+  factor_bucket: "defensives"
+  asset_class_all_weather: "Defensive Equities"
+  inflation_sensitivity: "low"
+
+# ── All-Weather: Broad Commodities / Real Assets ───────────────────────────
+# Infrastructure mondiale — hedge inflation + décorrélation actions
+
+ZPRI.DE:
+  name: "SPDR Morningstar Multi-Asset Global Infrastructure ETF"
+  sector: "Industrials"
+  region: "Global"
+  asset_type: "ETF"
+  role: "hedge"
+  factor_bucket: "commodities"
+  asset_class_all_weather: "Broad Commodities"
+  inflation_sensitivity: "high"
+  etoro_instrument_id: 10579  # verified — weight match 6.08% ↔ 6.1% in report
+
+# ── All-Weather: Duration (Bonds) ──────────────────────────────────────────
+# Ballast portefeuille — contre-poids en régime risk-off / récession
+
+IEF:
+  name: "iShares 7-10 Year Treasury Bond ETF"
+  sector: "Government"
+  region: "US"
+  asset_type: "ETF"
+  role: "hedge"
+  factor_bucket: "rates_sensitive"
+  asset_class_all_weather: "Duration (Bonds)"
+  inflation_sensitivity: "negative"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RÉFÉRENTIEL ÉLARGI — titres non détenus actuellement
+# (utile si ajout futur ; IDs non vérifiés pour ce portfolio)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ── US Large-Cap Growth / Quality ──────────────────────────────────────────
 
 AAPL:
   name: "Apple Inc."
@@ -38,7 +247,6 @@ AAPL:
   factor_bucket: "us_growth"
   asset_class_all_weather: "Global Equities - Quality"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 1265  # needs verification
 
 MSFT:
   name: "Microsoft Corporation"
@@ -49,7 +257,6 @@ MSFT:
   factor_bucket: "us_growth"
   asset_class_all_weather: "Global Equities - Quality"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 1259  # needs verification
 
 GOOGL:
   name: "Alphabet Inc. (Class A)"
@@ -101,8 +308,6 @@ TSLA:
   asset_class_all_weather: "Global Equities - Value/Cyclicals"
   inflation_sensitivity: "medium"
 
-# ── Quality / Value ────────────────────────────────────────────────────────
-
 V:
   name: "Visa Inc."
   sector: "Financial Services"
@@ -112,7 +317,6 @@ V:
   factor_bucket: "quality"
   asset_class_all_weather: "Global Equities - Quality"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 8739  # needs verification
 
 MA:
   name: "Mastercard Inc."
@@ -134,17 +338,7 @@ JPM:
   asset_class_all_weather: "Global Equities - Value/Cyclicals"
   inflation_sensitivity: "medium"
 
-BRK.B:
-  name: "Berkshire Hathaway Inc. (Class B)"
-  sector: "Financial Services"
-  region: "US"
-  asset_type: "Equity"
-  role: "core"
-  factor_bucket: "quality"
-  asset_class_all_weather: "Global Equities - Value/Cyclicals"
-  inflation_sensitivity: "medium"
-
-# ── Defensive Equities ─────────────────────────────────────────────────────
+# ── US Defensive ───────────────────────────────────────────────────────────
 
 JNJ:
   name: "Johnson & Johnson"
@@ -155,7 +349,6 @@ JNJ:
   factor_bucket: "defensives"
   asset_class_all_weather: "Defensive Equities"
   inflation_sensitivity: "low"
-  # etoro_instrument_id: 1233  — REMOVED: confirmed wrong (ID 1233 maps to a different instrument)
 
 PG:
   name: "Procter & Gamble Co."
@@ -197,7 +390,7 @@ UNH:
   asset_class_all_weather: "Defensive Equities"
   inflation_sensitivity: "low"
 
-# ── Energy / Commodities ───────────────────────────────────────────────────
+# ── US Energy ──────────────────────────────────────────────────────────────
 
 XOM:
   name: "Exxon Mobil Corporation"
@@ -208,7 +401,6 @@ XOM:
   factor_bucket: "energy"
   asset_class_all_weather: "Energy Tilt"
   inflation_sensitivity: "high"
-  etoro_instrument_id: 1118  # needs verification
 
 CVX:
   name: "Chevron Corporation"
@@ -241,7 +433,6 @@ GLD:
   factor_bucket: "commodities"
   asset_class_all_weather: "Gold"
   inflation_sensitivity: "high"
-  etoro_instrument_id: 1253  # needs verification
 
 IAU:
   name: "iShares Gold Trust"
@@ -273,21 +464,10 @@ PDBC:
   asset_class_all_weather: "Broad Commodities"
   inflation_sensitivity: "high"
 
-# ── Fixed Income / Duration ────────────────────────────────────────────────
+# ── Fixed Income ───────────────────────────────────────────────────────────
 
 TLT:
   name: "iShares 20+ Year Treasury Bond ETF"
-  sector: "Government"
-  region: "US"
-  asset_type: "ETF"
-  role: "hedge"
-  factor_bucket: "rates_sensitive"
-  asset_class_all_weather: "Duration (Bonds)"
-  inflation_sensitivity: "negative"
-  etoro_instrument_id: 2507  # needs verification
-
-IEF:
-  name: "iShares 7-10 Year Treasury Bond ETF"
   sector: "Government"
   region: "US"
   asset_type: "ETF"
@@ -388,7 +568,6 @@ BTC:
   role: "swing"
   factor_bucket: "other"
   inflation_sensitivity: "medium"
-  # etoro_instrument_id: 10579  — REMOVED: confirmed wrong (ID 10579 maps to a different instrument)
 
 ETH:
   name: "Ethereum"
