@@ -40,6 +40,7 @@ Use  parse_csv_export()  to produce the same raw_data dict as fetch_portfolio().
 import csv
 import os
 import logging
+from typing import Dict, List, Optional
 from src.utils import get_utc_timestamp, generate_request_id, get_retry_session, write_json
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,109 @@ logger = logging.getLogger(__name__)
 # Launched October 2025; endpoint path may change — check the portal if you
 # receive 404 errors.
 ETORO_API_URL = "https://public-api.etoro.com/api/v1/trading/info/portfolio"
+
+# Instruments metadata endpoint — resolves a numeric instrumentID to ticker symbol.
+# The eToro public API exposes instrument lookup under market-data.
+# Candidate URLs (try in order; the first 2xx response wins):
+_INSTRUMENT_URL_CANDIDATES = [
+    "https://public-api.etoro.com/api/v1/market-data/instruments/{id}",
+    "https://public-api.etoro.com/api/v1/metadata/instruments/{id}",
+    "https://public-api.etoro.com/api/v1/instruments/{id}",
+]
+
+
+# ---------------------------------------------------------------------------
+# Instrument symbol resolution
+# ---------------------------------------------------------------------------
+
+def _resolve_one_instrument(
+    instrument_id: int,
+    headers: dict,
+    session,
+) -> Optional[str]:
+    """
+    Attempt to resolve a single instrumentID → ticker symbol via the eToro
+    instruments metadata endpoint.
+
+    Tries several candidate URL patterns and returns the first valid symbol
+    found, or None if all attempts fail.
+    """
+    for url_template in _INSTRUMENT_URL_CANDIDATES:
+        url = url_template.format(id=instrument_id)
+        try:
+            resp = session.get(url, headers=headers, timeout=5)
+            if resp.status_code == 200:
+                data = resp.json()
+                # Try common field names for the ticker/symbol
+                for field in ("symbolFull", "symbol", "ticker", "instrumentSymbol",
+                              "internalSymbolFull", "displayName", "name"):
+                    val = data.get(field) or (data.get("instrument") or {}).get(field)
+                    if val and isinstance(val, str) and val.strip():
+                        return val.strip().upper()
+        except Exception:
+            pass
+    return None
+
+
+def resolve_instrument_symbols(
+    positions: List[dict],
+    api_key: str,
+    user_key: str,
+) -> Dict[int, str]:
+    """
+    Batch-resolve numeric instrumentIDs to ticker symbols via the eToro API.
+
+    Only queries IDs that are not already resolvable from the position's own
+    symbol/ticker fields. Returns a dict of {instrumentID: ticker_symbol} for
+    IDs that were successfully resolved.
+
+    This is a best-effort step — resolution failures are logged but do not
+    raise exceptions.
+    """
+    # Collect IDs that lack an inline symbol
+    unresolved_ids = set()
+    for pos in positions:
+        has_symbol = any(
+            pos.get(k) and isinstance(pos.get(k), str) and pos.get(k).strip()
+            for k in ("symbol", "ticker", "instrumentSymbol", "instrument_symbol",
+                      "_csv_ticker")
+        )
+        if not has_symbol:
+            inst_id = pos.get("instrumentID") or pos.get("instrumentId")
+            if inst_id is not None:
+                try:
+                    unresolved_ids.add(int(inst_id))
+                except (TypeError, ValueError):
+                    pass
+
+    if not unresolved_ids:
+        return {}
+
+    logger.info(
+        f"Resolving {len(unresolved_ids)} instrument IDs via eToro instruments API: "
+        f"{sorted(unresolved_ids)}"
+    )
+
+    session = get_retry_session()
+    headers = {
+        "x-request-id": generate_request_id(),
+        "x-api-key": api_key,
+        "x-user-key": user_key,
+    }
+
+    resolved: Dict[int, str] = {}
+    for inst_id in sorted(unresolved_ids):
+        symbol = _resolve_one_instrument(inst_id, headers, session)
+        if symbol:
+            resolved[inst_id] = symbol
+            logger.info(f"  Resolved instrumentID {inst_id} → {symbol}")
+        else:
+            logger.warning(
+                f"  Could not resolve instrumentID {inst_id} — "
+                "add etoro_instrument_id to config/assets.yml to fix."
+            )
+
+    return resolved
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +167,8 @@ def fetch_portfolio(out_dir: str = "out") -> dict:
       ETORO_USER_KEY         — per-user key from api-portal.etoro.com
 
     Returns the parsed JSON response dict and writes the raw payload to out_dir.
+    Positions are enriched with a '_resolved_symbol' field for any instrumentIDs
+    that could be resolved via the instruments API.
 
     Raises ValueError if credentials are missing.
     Raises requests.HTTPError if the API returns a non-2xx status.
@@ -90,6 +196,32 @@ def fetch_portfolio(out_dir: str = "out") -> dict:
     response.raise_for_status()
 
     data = response.json()
+
+    # Log position field names from the first position to aid debugging
+    positions = (
+        data.get("clientPortfolio", {}).get("positions", [])
+        or data.get("positions", [])
+    )
+    if positions:
+        first_pos = positions[0]
+        logger.info(f"eToro API position fields: {list(first_pos.keys())}")
+
+    # Attempt to resolve unrecognised instrumentIDs to ticker symbols
+    try:
+        id_to_symbol = resolve_instrument_symbols(positions, api_key, user_key)
+        if id_to_symbol:
+            # Inject '_resolved_symbol' so normalize.py can pick it up
+            for pos in positions:
+                inst_id = pos.get("instrumentID") or pos.get("instrumentId")
+                if inst_id is not None:
+                    try:
+                        sym = id_to_symbol.get(int(inst_id))
+                        if sym:
+                            pos["_resolved_symbol"] = sym
+                    except (TypeError, ValueError):
+                        pass
+    except Exception as e:
+        logger.warning(f"Instrument symbol resolution failed (non-fatal): {e}")
 
     timestamp = get_utc_timestamp()
     filepath = os.path.join(out_dir, f"raw_{timestamp}.json")

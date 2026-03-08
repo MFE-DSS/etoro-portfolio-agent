@@ -20,6 +20,14 @@
 #                            Obtain from the eToro Discovery API or API portal.
 
 # ── US Large-Cap Growth / Quality Equities ─────────────────────────────────
+#
+# etoro_instrument_id — numeric ID returned by the eToro API for this instrument.
+# HOW TO VERIFY: In the eToro app, open the instrument page and check the URL
+# (e.g., etoro.com/markets/aapl → id visible in API calls), or query:
+#   GET https://public-api.etoro.com/api/v1/market-data/search?internalSymbolFull=AAPL
+# IDs marked "verified" have been confirmed against a live API response.
+# IDs without a "verified" note are best-guess and should be confirmed.
+# IMPORTANT: Remove or correct an entry if it resolves to the wrong position.
 
 AAPL:
   name: "Apple Inc."
@@ -30,7 +38,7 @@ AAPL:
   factor_bucket: "us_growth"
   asset_class_all_weather: "Global Equities - Quality"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 1265
+  etoro_instrument_id: 1265  # needs verification
 
 MSFT:
   name: "Microsoft Corporation"
@@ -41,7 +49,7 @@ MSFT:
   factor_bucket: "us_growth"
   asset_class_all_weather: "Global Equities - Quality"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 1259
+  etoro_instrument_id: 1259  # needs verification
 
 GOOGL:
   name: "Alphabet Inc. (Class A)"
@@ -104,7 +112,7 @@ V:
   factor_bucket: "quality"
   asset_class_all_weather: "Global Equities - Quality"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 8739
+  etoro_instrument_id: 8739  # needs verification
 
 MA:
   name: "Mastercard Inc."
@@ -147,7 +155,7 @@ JNJ:
   factor_bucket: "defensives"
   asset_class_all_weather: "Defensive Equities"
   inflation_sensitivity: "low"
-  etoro_instrument_id: 1233
+  # etoro_instrument_id: 1233  — REMOVED: confirmed wrong (ID 1233 maps to a different instrument)
 
 PG:
   name: "Procter & Gamble Co."
@@ -200,7 +208,7 @@ XOM:
   factor_bucket: "energy"
   asset_class_all_weather: "Energy Tilt"
   inflation_sensitivity: "high"
-  etoro_instrument_id: 1118
+  etoro_instrument_id: 1118  # needs verification
 
 CVX:
   name: "Chevron Corporation"
@@ -233,7 +241,7 @@ GLD:
   factor_bucket: "commodities"
   asset_class_all_weather: "Gold"
   inflation_sensitivity: "high"
-  etoro_instrument_id: 1253
+  etoro_instrument_id: 1253  # needs verification
 
 IAU:
   name: "iShares Gold Trust"
@@ -276,7 +284,7 @@ TLT:
   factor_bucket: "rates_sensitive"
   asset_class_all_weather: "Duration (Bonds)"
   inflation_sensitivity: "negative"
-  etoro_instrument_id: 2507
+  etoro_instrument_id: 2507  # needs verification
 
 IEF:
   name: "iShares 7-10 Year Treasury Bond ETF"
@@ -380,7 +388,7 @@ BTC:
   role: "swing"
   factor_bucket: "other"
   inflation_sensitivity: "medium"
-  etoro_instrument_id: 10579
+  # etoro_instrument_id: 10579  — REMOVED: confirmed wrong (ID 10579 maps to a different instrument)
 
 ETH:
   name: "Ethereum"

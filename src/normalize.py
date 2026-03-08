@@ -72,31 +72,79 @@ def _build_instrument_id_map(assets_config: dict) -> dict:
     return id_map
 
 
+def _get_profit(pos: dict) -> float:
+    """
+    Extract the profit/PnL value from a position dict, trying multiple field
+    name variants used by different eToro API versions.
+    """
+    for key in ("netProfit", "profit", "pl", "pnl", "netPl", "pl$", "Profit"):
+        val = pos.get(key)
+        if val is not None:
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                pass
+    return 0.0
+
+
+def _get_amount(pos: dict) -> float:
+    """
+    Extract the invested/current value from a position dict.
+    eToro API may use 'amount', 'value', 'equityInUSD', or 'invested'.
+    """
+    for key in ("amount", "value", "equityInUSD", "invested", "Amount"):
+        val = pos.get(key)
+        if val is not None:
+            try:
+                f = float(val)
+                if f > 0:
+                    return f
+            except (TypeError, ValueError):
+                pass
+    return 0.0
+
+
 def _resolve_ticker(pos: dict, id_map: dict) -> str:
     """
     Resolve the best available ticker string from a raw position dict.
 
     Priority order:
-      1. symbol / ticker fields (set by newer API versions)
-      2. _csv_ticker (set by parse_csv_export)
-      3. instrumentID → lookup in id_map (assets.yml etoro_instrument_id)
-      4. Fallback placeholder: ASSET_<instrumentID> or UNKNOWN
+      1. Short symbol / ticker fields returned directly by the API
+      2. _resolved_symbol injected by fetch_etoro.resolve_instrument_symbols()
+      3. _csv_ticker (set by parse_csv_export)
+      4. instrumentID → lookup in id_map (assets.yml etoro_instrument_id)
+      5. Fallback placeholder: ASSET_<instrumentID> or UNKNOWN
     """
-    for key in ("symbol", "ticker", "instrumentSymbol", "instrument_symbol"):
+    # Direct symbol fields — guard against long display names masquerading as tickers
+    for key in ("symbol", "ticker", "instrumentSymbol", "instrument_symbol",
+                "symbolFull", "internalSymbolFull"):
         val = pos.get(key)
-        if val and isinstance(val, str) and val.strip():
-            return val.strip().upper()
+        if val and isinstance(val, str):
+            stripped = val.strip()
+            # Accept only short strings without spaces (real ticker symbols)
+            if stripped and len(stripped) <= 12 and " " not in stripped:
+                return stripped.upper()
 
+    # Injected by fetch_etoro.resolve_instrument_symbols()
+    resolved_sym = pos.get("_resolved_symbol")
+    if resolved_sym and isinstance(resolved_sym, str):
+        return resolved_sym.strip().upper()
+
+    # CSV export path
     csv_ticker = pos.get("_csv_ticker")
     if csv_ticker:
         return csv_ticker.strip().upper()
 
-    inst_id = pos.get("instrumentID")
+    # Fallback: id_map from assets.yml etoro_instrument_id entries
+    inst_id = pos.get("instrumentID") or pos.get("instrumentId")
     if inst_id is not None:
-        resolved = id_map.get(int(inst_id))
-        if resolved:
-            return resolved
-        return f"ASSET_{inst_id}"
+        try:
+            resolved = id_map.get(int(inst_id))
+            if resolved:
+                return resolved
+            return f"ASSET_{inst_id}"
+        except (TypeError, ValueError):
+            pass
 
     return "UNKNOWN"
 
@@ -148,38 +196,56 @@ def normalize_portfolio(raw_data: dict, out_dir: str = "out") -> dict:
     raw_positions = client_portfolio.get("positions", [])
     credit = float(client_portfolio.get("credit", 0.0))
 
+    # Log field names from first position to aid debugging unknown field names
+    if raw_positions:
+        logger.info(f"eToro position fields available: {sorted(raw_positions[0].keys())}")
+
     # Aggregate invested value per ticker (multiple positions can share one)
     grouped: dict[str, dict] = {}
+    unresolved_tickers = []
     for pos in raw_positions:
         ticker = _resolve_ticker(pos, id_map)
-        amount = float(pos.get("amount", 0.0))
+        amount = _get_amount(pos)
+
+        if ticker.startswith("ASSET_") or ticker == "UNKNOWN":
+            inst_id = pos.get("instrumentID") or pos.get("instrumentId", "?")
+            unresolved_tickers.append(str(inst_id))
 
         if ticker not in grouped:
             grouped[ticker] = {
                 "amount": 0.0,
-                "open_rate": pos.get("openRate") or pos.get("open_rate"),
-                "current_rate": pos.get("currentRate") or pos.get("current_rate"),
+                "open_rate": pos.get("openRate") or pos.get("open_rate") or pos.get("avgOpen"),
+                "current_rate": (pos.get("currentRate") or pos.get("current_rate")
+                                 or pos.get("currentPrice") or pos.get("rate")),
                 "profit": 0.0,
                 "units": None,
             }
 
         grouped[ticker]["amount"] += amount
-        grouped[ticker]["profit"] = grouped[ticker].get("profit", 0.0) + float(
-            pos.get("profit", 0.0)
-        )
-        # Prefer the first open_rate seen (multi-entry positions would need averaging;
-        # for now we keep the first as a reasonable approximation)
+        grouped[ticker]["profit"] = grouped[ticker].get("profit", 0.0) + _get_profit(pos)
+
+        # Prefer the first open_rate seen
         if grouped[ticker]["open_rate"] is None:
-            grouped[ticker]["open_rate"] = pos.get("openRate") or pos.get("open_rate")
+            grouped[ticker]["open_rate"] = (pos.get("openRate") or pos.get("open_rate")
+                                            or pos.get("avgOpen"))
         if grouped[ticker]["current_rate"] is None:
-            grouped[ticker]["current_rate"] = pos.get("currentRate") or pos.get("current_rate")
+            grouped[ticker]["current_rate"] = (pos.get("currentRate") or pos.get("current_rate")
+                                               or pos.get("currentPrice") or pos.get("rate"))
         # Accumulate units when available
-        raw_units = pos.get("units") or pos.get("Units")
+        raw_units = pos.get("units") or pos.get("Units") or pos.get("netUnits")
         if raw_units is not None:
             try:
                 grouped[ticker]["units"] = (grouped[ticker]["units"] or 0.0) + float(raw_units)
             except (TypeError, ValueError):
                 pass
+
+    if unresolved_tickers:
+        logger.warning(
+            f"{len(unresolved_tickers)} position(s) could not be resolved to a ticker symbol "
+            f"(instrumentIDs: {', '.join(unresolved_tickers)}). "
+            "Add etoro_instrument_id entries to config/assets.yml to fix, "
+            "or ensure the eToro API instruments endpoint is reachable."
+        )
 
     total_invested = sum(g["amount"] for g in grouped.values())
     total_equity = credit + total_invested
