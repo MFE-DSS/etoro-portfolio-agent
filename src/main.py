@@ -70,6 +70,19 @@ def main():
             json.dump(market_state, f, indent=2)
         logger.info(f"Market state saved to {out_file}")
 
+        # Typed regime summary (additive — does not modify pipeline flow)
+        try:
+            from src.contracts import RegimeOutput
+            _regime = RegimeOutput.from_heuristic_market_state(market_state)
+            logger.info(
+                f"[RegimeOutput] engine=heuristic_v2 "
+                f"traffic_light={_regime.traffic_light} "
+                f"risk_score={_regime.risk_score} "
+                f"label={_regime.regime_label}"
+            )
+        except Exception as _re:
+            logger.warning(f"RegimeOutput parse skipped: {_re}")
+
         # Step 1: Fetch raw data
         logger.info("=== STEP 1: Fetch ===")
         from src.fetch_etoro import fetch_portfolio

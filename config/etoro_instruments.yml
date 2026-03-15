@@ -1,0 +1,26 @@
+# eToro Instrument ID → Ticker Mapping
+#
+# Maps eToro's internal numeric instrumentID values to canonical ticker symbols.
+# Source: eToro internal instrument catalogue (requires manual update when new
+# instruments are added to the portfolio).
+#
+# Format:
+#   <instrument_id>: <ticker_symbol>
+#
+# To add a new instrument:
+# 1. Find the instrumentID in the raw eToro API response (clientPortfolio.positions[].instrumentID)
+# 2. Add an entry below with the corresponding ticker symbol
+# 3. Ensure the ticker symbol also exists in config/assets.yml for full enrichment
+#
+# Instruments missing from this mapping will NOT be silently relabelled.
+# They will be logged as warnings and represented as UNMAPPED_<instrumentID>.
+
+instrument_map:
+  1265: "AAPL"
+  1259: "MSFT"
+  1233: "JNJ"
+  1118: "XOM"
+  1253: "GLD"
+  10579: "BTC"
+  2507: "TLT"
+  8739: "V"
